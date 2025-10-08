@@ -26,13 +26,13 @@ const SIDEBAR_ITEMS = [
 
 const LeftSidebar = ()=>{
 	return (
-		<section className="sticky top-0 w-72 h-screen overflow-y-hidden hover:overflow-y-scroll overflow-x-hidden overscroll-contain border-r-1 border-gray-600 py-5 px-5">
+		<section className="sticky top-14 w-80 h-[calc(100vh-3.5rem)] overflow-y-hidden hover:overflow-y-scroll overflow-x-hidden overscroll-contain border-r-1 border-gray-600 p-5">
 			{
 				/* Main Navigation */
 				SIDEBAR_ITEMS.map((item)=>{
-					return (<Link className="flex relative rounded-md py-2 hover:bg-white/10" href={`/${item.title.toLowerCase()}`} key={item.title}>
-						<div className="mx-2">
-							<item.icon size={25}/>
+					return (<Link className="flex relative rounded-md p-2 hover:bg-white/10" href={`/${item.title.toLowerCase()}`} key={item.title}>
+						<div className="ml-2 mr-4">
+							<item.icon size={22}/>
 						</div>
 						<div>
 							{item.title}
@@ -44,13 +44,13 @@ const LeftSidebar = ()=>{
 			<hr className="my-5 border-gray-700"/>
 			
 			{/* Community List */}
-			<h6 className="text-sm text-gray-500 mb-3">COMMUNITIES</h6>
+			<h6 className="text-sm text-gray-500 mb-3 mx-2">COMMUNITIES</h6>
 			
 			{
 				Array.from({length:20}).map((_,i)=>{
-					return (<Link className="flex relative rounded-md py-2 hover:bg-white/10" href={`/community/${i}`} key={`${i}`}>
-						<div className="mx-2">
-							<div className="bg-slate-400 rounded-full w-5 h-5"></div>
+					return (<Link className="flex relative rounded-md p-2 hover:bg-white/10" href={`/community/${i}`} key={`${i}`}>
+						<div className="ml-2 mr-4">
+							<div className="bg-slate-400 rounded-full w-7 h-7"></div>
 						</div>
 						<div>
 							Community {i}

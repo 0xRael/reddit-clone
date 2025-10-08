@@ -1,11 +1,11 @@
-import MainComponent from "@/components/MainComponent";
+import PostsList from "@/components/PostsList";
 import RightSection from "@/components/RightSection";
 
 const Home = ()=>{
 	
 	return (
 		<div className="w-full h-full justify-center flex relative">
-			<MainComponent/>
+			<PostsList/>
 				
 			<RightSection/>
 		</div>
