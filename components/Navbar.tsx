@@ -29,7 +29,6 @@ const Navbar = () => {
 
       if (error) {
         console.error("Error fetching username:", error)
-        setUsername(user.email) // fallback
       } else {
         setUsername(data?.username ?? user.email)
       }
