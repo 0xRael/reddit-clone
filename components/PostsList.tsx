@@ -22,7 +22,7 @@ type Post = {
 
 const PostsList = ()=>{
 	const supabase = createClient()
-	const [posts, setPosts] = useState<Post[] | null>([])
+	const [posts, setPosts] = useState<Post[]>([])
 	
 	useEffect(() => {
 		const loadPosts = async () => {
