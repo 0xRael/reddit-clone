@@ -1,6 +1,5 @@
 'use client'
 
-import Link from "next/link";
 import { FaRegThumbsUp, FaRegThumbsDown, FaShare } from "react-icons/fa6";
 import { FiMessageCircle } from "react-icons/fi";
 import { SlOptions } from "react-icons/sl";
@@ -8,9 +7,22 @@ import { createClient } from "@/utils/supabase/component"
 import { useEffect, useState } from "react"
 import { formatDistanceToNow } from 'date-fns';
 
+type Post = {
+  id: string
+  title: string | null
+  body: string | null
+  created_at: string
+  users: {
+    username: string
+  }
+  communities: {
+    name: string | null
+  }
+}
+
 const PostsList = ()=>{
 	const supabase = createClient()
-	const [posts, setPosts] = useState<any[] | null>([])
+	const [posts, setPosts] = useState<Post[] | null>([])
 	
 	useEffect(() => {
 		const loadPosts = async () => {
