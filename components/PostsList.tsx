@@ -8,8 +8,8 @@ import { useEffect, useState } from "react"
 import { formatDistanceToNow } from 'date-fns';
 
 type postVotesView = {
-	upvotes: number | null,
-	downvotes: number | null
+	upvotes: number,
+	downvotes: number
 }
 
 type Post = {
@@ -104,7 +104,12 @@ const PostsList = ()=>{
 								<FaRegThumbsUp className="rounded-full hover:bg-white/10 hover:text-orange-700"/>
 							</button>
 							
-							<p className="mx-2 text-sm">{post.post_votes_view.length > 0 ? post.post_votes_view[0].upvotes - post.post_votes_view[0].downvotes : 0}</p>
+							<p className="mx-2 text-sm">
+							  {post.post_votes_view?.length
+								? post.post_votes_view[0].upvotes - post.post_votes_view[0].downvotes
+								: 0}
+							</p>
+
 							
 							<button onClick={(e) => votePost(post.id, -1)}>
 								<FaRegThumbsDown className="rounded-full hover:bg-white/10 hover:text-blue-700"/>
