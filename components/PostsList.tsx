@@ -7,6 +7,11 @@ import { createClient } from "@/utils/supabase/component"
 import { useEffect, useState } from "react"
 import { formatDistanceToNow } from 'date-fns';
 
+type postVotesView = {
+	upvotes: number | null,
+	downvotes: number | null
+}
+
 type Post = {
   id: string
   title: string | null
@@ -18,6 +23,7 @@ type Post = {
   communities: {
     name: string | null
   }
+  post_votes_view: postVotesView[]
 }
 
 const PostsList = ()=>{
@@ -35,6 +41,10 @@ const PostsList = ()=>{
 					),
 					communities (
 						name
+					),
+					post_votes_view (
+						upvotes,
+						downvotes
 					)
 				`)
 				.order("created_at", { ascending: false })
@@ -49,6 +59,26 @@ const PostsList = ()=>{
 		
 		loadPosts()
 	}, [supabase])
+	
+	const votePost = async (postId: string, voteType: number) => {
+		const { data: { user } } = await supabase.auth.getUser()
+		
+		if (!user) {
+			return
+		}
+	  
+		const { data, error } = await supabase
+			.from("vote")
+			.insert({
+				user_id: user.id,
+				post_id: postId,
+				type: voteType
+			})
+		
+		if (error) {
+			console.error("Error voting:", error)
+		}
+	}
 	
 	return (
 	<main className="flex h-full min-h-screen flex-col w-full max-w-2xl">
@@ -70,9 +100,15 @@ const PostsList = ()=>{
 					
 					<div className="flex space-x-2">
 						<div className="flex p-2 rounded-full bg-white/10">
-							<FaRegThumbsUp className="rounded-full hover:bg-white/10 hover:text-orange-700"/>
-							<p className="mx-2 text-sm">00</p>
-							<FaRegThumbsDown className="rounded-full hover:bg-white/10 hover:text-blue-700"/>
+							<button onClick={(e) => votePost(post.id, 1)}>
+								<FaRegThumbsUp className="rounded-full hover:bg-white/10 hover:text-orange-700"/>
+							</button>
+							
+							<p className="mx-2 text-sm">{post.post_votes_view.length > 0 ? post.post_votes_view[0].upvotes - post.post_votes_view[0].downvotes : 0}</p>
+							
+							<button onClick={(e) => votePost(post.id, -1)}>
+								<FaRegThumbsDown className="rounded-full hover:bg-white/10 hover:text-blue-700"/>
+							</button>
 						</div>
 						
 						<div className="flex p-2 rounded-full bg-white/10 hover:bg-white/20">
