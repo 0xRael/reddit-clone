@@ -22,7 +22,7 @@ type Post = {
 
 const PostsList = ()=>{
 	const supabase = createClient()
-	const [posts, setPosts] = useState<Post[] | null>([])
+	const [posts, setPosts] = useState<Post[]>([])
 	
 	useEffect(() => {
 		const loadPosts = async () => {
@@ -40,7 +40,7 @@ const PostsList = ()=>{
 				.order("created_at", { ascending: false })
 			
 			console.log(data)
-			setPosts(data)
+			setPosts(data ?? [])
 			
 			if (error) {
 				console.error("Error fetching posts:", error)
