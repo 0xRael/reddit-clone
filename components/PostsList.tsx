@@ -10,7 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 const PostsList = ()=>{
 	const supabase = createClient()
-	const [posts, setPosts] = useState([])
+	const [posts, setPosts] = useState<any[] | null>([])
 	
 	useEffect(() => {
 		const loadPosts = async () => {
