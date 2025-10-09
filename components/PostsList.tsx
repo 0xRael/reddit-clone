@@ -40,7 +40,7 @@ const PostsList = ()=>{
 				.order("created_at", { ascending: false })
 			
 			console.log(data)
-			setPosts(data)
+			setPosts(data ?? [])
 			
 			if (error) {
 				console.error("Error fetching posts:", error)
