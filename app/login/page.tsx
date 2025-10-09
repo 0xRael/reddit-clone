@@ -11,11 +11,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
   const [isSignUp, setIsSignUp] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   async function logIn() {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) return console.error(error)
-    router.push('/')
+    if (error) {
+		setErrorMessage(error.message)
+		return
+	}
+    setSuccessMessage("Logged in successfully!")
   }
 
   async function signUp() {
@@ -24,12 +29,47 @@ export default function LoginPage() {
       password,
       options: { data: { username } }
     })
-    if (error) return console.error(error)
-    router.push('/')
+    if (error) {
+		setErrorMessage(error.message)
+		return
+	}
+    setSuccessMessage("Account created! Check your e-mail to confirm.")
   }
 
   return (
     <div className="w-full h-full min-h-screen flex items-center justify-center">
+		{errorMessage && (
+		  <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+			<div className="bg-red-600 text-white p-4 rounded-lg shadow-lg space-y-3 w-80">
+			  <h2 className="font-bold">Error:</h2>
+			  <p>{errorMessage}</p>
+			  <button
+				onClick={() => setErrorMessage(null)}
+				className="bg-white/20 hover:bg-white/30 px-3 py-1 rounded"
+			  >
+				OK
+			  </button>
+			</div>
+		  </div>
+		)}
+		{successMessage && (
+		  <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+			<div className="bg-green-600 text-white p-4 rounded-lg shadow-lg space-y-3 w-80">
+			  <h2 className="font-bold">Success</h2>
+			  <p>{successMessage}</p>
+			  <button
+				onClick={() => {
+					setSuccessMessage(null);
+					router.push('/')
+					}
+				}
+				className="bg-white/20 hover:bg-white/30 px-3 py-1 rounded"
+			  >
+				OK
+			  </button>
+			</div>
+		  </div>
+		)}
       <form
         onSubmit={(e) => {
           e.preventDefault()

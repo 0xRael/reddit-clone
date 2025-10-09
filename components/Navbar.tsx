@@ -47,7 +47,7 @@ const Navbar = () => {
   }, [supabase])
 
   return (
-    <nav className="w-full h-14 max-w-screen fixed flex top-0 border-gray-600 border-b-1 bg-normal p-2 space-x-2">
+    <nav className="w-full h-14 max-w-screen fixed flex top-0 border-gray-600 border-b-1 bg-normal p-2">
       <Link href="/" className="text-xl font-bold mt-2 ml-5 min-w-60">Home</Link>
 
       <div className="w-full flex justify-center items-center">
@@ -58,22 +58,22 @@ const Navbar = () => {
         />
       </div>
 
-      <Link href="/submit" className="flex p-2 pr-4 rounded-full hover:bg-white/20">
-        <FaPlus size={22} className="mr-3" /> Create
-      </Link>
+	  {username ? (
+        <div className="block flex space-x-2">
+		  <Link href="/submit" className="flex p-2 pr-4 rounded-full hover:bg-white/20">
+			<FaPlus size={22} className="mr-3" /> Create
+		  </Link>
 
-      <Link href="/notifications" className="flex p-2 rounded-full hover:bg-white/20 space-x-2">
-        <VscBell size={22} />
-      </Link>
+		  <Link href="/notifications" className="flex p-2 rounded-full hover:bg-white/20 space-x-2">
+			<VscBell size={22} />
+		  </Link>
 
-      {username ? (
-        <>
           <div className="block mt-2">{username}</div>
           <div className="bg-slate-400 rounded-full my-1 w-8 h-8"></div>
-        </>
+        </div>
       ) : (
         <Link href="/login" className="block hover:underline">
-          Log in
+          Login
         </Link>
       )}
     </nav>
