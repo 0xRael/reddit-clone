@@ -6,23 +6,28 @@ export function createClient() {
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, // use anon key here
     {
       cookies: {
-        getAll() {
-          return cookieStore.getAll()
+        get(name) {
+          const cookie = cookieStore.get(name)
+          return cookie ? { name: cookie.name, value: cookie.value } : undefined
         },
-        setAll(cookiesToSet) {
+        set(name, value, options) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options as CookieOptions)
-            })
+            cookieStore.set(name, value, options as CookieOptions)
           } catch {
-            // In some server contexts (e.g. static rendering) cookies can’t be set
+            // In static contexts, cookies can't be set
+          }
+        },
+        remove(name, options) {
+          try {
+            cookieStore.delete(name, options)
+          } catch {
+            // In static contexts, cookies can't be deleted
           }
         },
       },
     }
   )
 }
-
