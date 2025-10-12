@@ -23,7 +23,11 @@ type Post = {
   post_replies_view: {count: number}[]
 }
 
-const PostsList = ()=>{
+type Props = {
+	communityId?: string | null;
+}
+
+const PostsList = ({ communityId }: Props)=>{
 	const supabase = createClient()
 	const [posts, setPosts] = useState<Post[]>([])
 	
@@ -57,7 +61,41 @@ const PostsList = ()=>{
 			}
 		}
 		
-		loadPosts()
+		const loadPostsFromCommunity = async () => {
+			const { data, error } = await supabase
+				.from("posts")
+				.select(`
+					*,
+					users (
+						username
+					),
+					communities (
+						name
+					),
+					post_votes_view (
+						upvotes,
+						downvotes
+					),
+					post_replies_view (
+						count
+					)
+				`)
+				.eq("community_id", communityId ?? "")
+				.order("created_at", { ascending: false })
+			
+			console.log(data)
+			setPosts(data ?? [])
+			
+			if (error) {
+				console.error("Error fetching posts:", error)
+			}
+		}
+		
+		if(communityId){
+			loadPostsFromCommunity()
+		} else {
+			loadPosts()
+		}
 	}, [supabase])
 	
 	const votePost = async (postId: string, voteType: number) => {
