@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import PostingPage from '@components/PostingPage'
+import PostingPage from '@/components/PostingPage'
 
 export default function SubmitPage() {
   return (
