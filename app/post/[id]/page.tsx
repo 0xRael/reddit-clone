@@ -102,8 +102,6 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 			
 		if (error) {
 			console.error("An error ocurred when commenting:", error);
-		} else {
-			router.push("/");
 		}
 	}
 	
