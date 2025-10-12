@@ -88,12 +88,16 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 			return
 		}
 
+		if (!post) {
+			return
+		}
+
 		const { data, error } = await supabase
 			.from("replies")
 			.insert({
 				text: comment,
 				user_id: user.id,
-				post_id: post.id
+				post_id: post?.id ?? "",
 			})
 			
 		if (error) {
