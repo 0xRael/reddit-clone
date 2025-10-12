@@ -1,5 +1,5 @@
 'use client'
-
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { createClient } from '@/utils/supabase/component'
 
@@ -9,11 +9,10 @@ type Props = {
 }
 
 export default function CommunityCreator({ open, onClose }: Props) {
-	if (!open) return null
-
 	const [name, setName] = useState('')
 	const [description, setDescription] = useState('')
 	const supabase = createClient()
+	const router = useRouter()
 
 	async function createCommunity() {
 		const { data: { user } } = await supabase.auth.getUser()
@@ -28,13 +27,17 @@ export default function CommunityCreator({ open, onClose }: Props) {
 				description: description,
 				owner_id: user.id
 			})
+			.select('id') 
+			.single()
 			
 		if (error) {
 			console.error("An error ocurred when creating the community:", error);
 		} else {
-			router.push("/");
+			router.push(`/community/${data.id}`);
 		}
 	}
+	
+	if (!open) return null
 	
 	return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
@@ -76,7 +79,7 @@ export default function CommunityCreator({ open, onClose }: Props) {
 		<div className="flex justify-end space-x-3">
 		  <button
 			onClick={onClose}
-			className="px-4 py-2 rounded bg-neutral-700 hover:bg-neutral-600"
+			className="px-4 py-2 rounded-full bg-neutral-700 hover:bg-neutral-600"
 		  >
 			Cancel
 		  </button>
@@ -86,7 +89,7 @@ export default function CommunityCreator({ open, onClose }: Props) {
 			  createCommunity()
 			  onClose()
 			}}
-			className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700"
+			className="px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700"
 		  >
 			Next
 		  </button>

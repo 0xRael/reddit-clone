@@ -19,8 +19,6 @@ type Props = {
 }
 
 const CommunityInfo = ({ communityId }: Props) => {
-	if(!communityId) return;
-	
 	const supabase = createClient()
 	const [community, setCommunity] = useState<Community | null>(null)
 	
@@ -40,6 +38,7 @@ const CommunityInfo = ({ communityId }: Props) => {
 		load();
 	}, [supabase, communityId])
 	
+	if(!communityId) return;
 	
 	return (
 		<>

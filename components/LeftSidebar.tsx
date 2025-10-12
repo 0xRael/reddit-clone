@@ -1,12 +1,14 @@
 'use client'
 
 import Link from "next/link";
+import { createClient } from '@/utils/supabase/component';
 import { FaPlus } from "react-icons/fa6"
 import { IoHomeOutline } from "react-icons/io5";
 import { LuCircleArrowOutUpRight } from "react-icons/lu";
 import { BsPeople } from "react-icons/bs";
 import { PiChartBarFill } from "react-icons/pi";
-import { useModal } from '@/components/ModalProvider'
+import { useModal } from '@/components/ModalProvider';
+import { useState, useEffect } from 'react';
 
 const SIDEBAR_ITEMS = [
 	{
@@ -27,8 +29,44 @@ const SIDEBAR_ITEMS = [
 	}
 ]
 
+type Join = {
+  id: string
+  user_id: string
+  community_id: string
+  communities: {
+    name: string
+  }
+}
+
 const LeftSidebar = ()=>{
 	const { openCommunityCreator } = useModal()
+	
+	const supabase = createClient()
+	const [joins, setJoins] = useState<Join[]>([])
+	
+	useEffect(() => {
+		const load = async () => {	
+			const { data: { user } } = await supabase.auth.getUser()
+			
+			if (!user) {
+				return
+			}		
+			
+			const { data } = await supabase
+			.from('joins')
+			.select(`
+				*,
+				communities (
+					name
+				)
+			`)
+			.eq('user_id', user.id)
+			
+			setJoins(data ?? [])
+		}
+		
+		load();
+	}, [supabase])
 	
 	return (
 		<section className="sticky top-14 w-80 h-[calc(100vh-3.5rem)] overflow-y-hidden hover:overflow-y-scroll overflow-x-hidden overscroll-contain border-r-1 border-gray-600 p-5">
@@ -61,13 +99,13 @@ const LeftSidebar = ()=>{
 			</button>
 			
 			{
-				Array.from({length:20}).map((_,i)=>{
-					return (<Link className="flex relative rounded-md p-2 hover:bg-white/10" href={`/community/${i}`} key={`${i}`}>
+				joins.map((join)=>{
+					return (<Link className="flex relative rounded-md p-2 hover:bg-white/10" href={`/community/${join.community_id}`} key={`${join.id}`}>
 						<div className="ml-2 mr-4">
 							<div className="bg-slate-400 rounded-full w-7 h-7"></div>
 						</div>
 						<div>
-							Community {i}
+							{join.communities?.name ?? ""}
 						</div>
 					</Link>);
 				})
