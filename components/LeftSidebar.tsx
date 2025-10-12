@@ -1,8 +1,12 @@
+'use client'
+
 import Link from "next/link";
+import { FaPlus } from "react-icons/fa6"
 import { IoHomeOutline } from "react-icons/io5";
 import { LuCircleArrowOutUpRight } from "react-icons/lu";
 import { BsPeople } from "react-icons/bs";
 import { PiChartBarFill } from "react-icons/pi";
+import { useModal } from '@/components/ModalProvider'
 
 const SIDEBAR_ITEMS = [
 	{
@@ -23,8 +27,9 @@ const SIDEBAR_ITEMS = [
 	}
 ]
 
-
 const LeftSidebar = ()=>{
+	const { openCommunityCreator } = useModal()
+	
 	return (
 		<section className="sticky top-14 w-80 h-[calc(100vh-3.5rem)] overflow-y-hidden hover:overflow-y-scroll overflow-x-hidden overscroll-contain border-r-1 border-gray-600 p-5">
 			{
@@ -46,6 +51,15 @@ const LeftSidebar = ()=>{
 			{/* Community List */}
 			<h6 className="text-sm text-gray-500 mb-3 mx-2">COMMUNITIES</h6>
 			
+			<button onClick={openCommunityCreator} className="flex relative rounded-md p-2 hover:bg-white/10">
+				<div className="ml-2 mr-4">
+					<FaPlus size={22} />
+				</div>
+				<div>
+					Create Community
+				</div>
+			</button>
+			
 			{
 				Array.from({length:20}).map((_,i)=>{
 					return (<Link className="flex relative rounded-md p-2 hover:bg-white/10" href={`/community/${i}`} key={`${i}`}>
@@ -58,8 +72,6 @@ const LeftSidebar = ()=>{
 					</Link>);
 				})
 			}
-			
-			
 		</section>
 	)
 }

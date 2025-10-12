@@ -8,8 +8,8 @@ import { useEffect, useState } from "react"
 import { createClient } from "@/utils/supabase/component"
 
 const Navbar = () => {
-  const supabase = createClient()
-  const [username, setUsername] = useState<string | null>(null)
+  const supabase = createClient();
+  const [username, setUsername] = useState<string | null>(null);
 
   useEffect(() => {
     const loadUser = async () => {
