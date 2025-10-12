@@ -28,6 +28,7 @@ type Reply = {
 	post_id: string | null,
 	reply_id: string | null,
 	text: string,
+	created_at: string,
 	users: {
 		username: string
 	}
