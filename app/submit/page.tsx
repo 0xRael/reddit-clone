@@ -1,6 +1,6 @@
 'use client'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/component'
 
 export default function PostingPage() {
@@ -58,6 +58,7 @@ export default function PostingPage() {
   }
   
   return (
+	<Suspense>
     <div className="w-full h-full min-h-screen flex items-center justify-center">
       <form
         onSubmit={(e) => {
@@ -102,5 +103,6 @@ export default function PostingPage() {
 		</div>
       </form>
     </div>
+	</Suspense>
   )
 }
