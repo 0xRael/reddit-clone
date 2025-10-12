@@ -24,7 +24,7 @@ type Post = {
 }
 
 type Props = {
-	communityId: string | null;
+	communityId?: string | null;
 }
 
 const PostsList = ({ communityId }: Props)=>{
