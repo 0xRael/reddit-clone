@@ -10,7 +10,7 @@ export default function PostingPage() {
 
 	const [title, setTitle] = useState('')
 	const [body, setBody] = useState('')
-	const [communityId, setCommunityId] = useState<String | null>(null)
+	const [communityId, setCommunityId] = useState<string | null>(null)
 	const [communityName, setCommunityName] = useState<string | null>(null)
   
 	useEffect(() => {
