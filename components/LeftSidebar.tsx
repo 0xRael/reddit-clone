@@ -51,7 +51,7 @@ const LeftSidebar = ()=>{
 			{/* Community List */}
 			<h6 className="text-sm text-gray-500 mb-3 mx-2">COMMUNITIES</h6>
 			
-			<button onClick={openCommunityCreator} className="flex relative rounded-md p-2 hover:bg-white/10">
+			<button onClick={openCommunityCreator} className="w-full flex relative rounded-md p-2 hover:bg-white/10">
 				<div className="ml-2 mr-4">
 					<FaPlus size={22} />
 				</div>

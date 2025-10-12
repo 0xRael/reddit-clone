@@ -1,6 +1,7 @@
 "use client"
 
-import { createClient } from '@/utils/supabase/component'
+import { createClient } from '@/utils/supabase/component';
+import CommunityInfo from '@/components/CommunityInfo';
 import { FaRegThumbsUp, FaRegThumbsDown, FaShare } from "react-icons/fa6";
 import { FiMessageCircle } from "react-icons/fi";
 import { SlOptions } from "react-icons/sl";
@@ -11,6 +12,7 @@ type Post = {
   id: string
   title: string | null
   body: string | null
+  community_id: string | null
   created_at: string
   users: {
     username: string
@@ -163,7 +165,7 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 	
   return (
   <div className="w-full h-full justify-center flex relative">
-	{ post ? <div className="w-full max-w-3xl">
+	{ post ? <><div className="w-full max-w-3xl">
 		<div className="space-y-2 py-3">
 			<div className="flex text-sm space-x-2">
 				<div className="bg-slate-400 rounded-full w-8 h-8"></div>
@@ -277,7 +279,7 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 			})
 		}
 		
-	</div> : <div></div> }
+	</div><CommunityInfo communityId={post.community_id}/></> : <></> }
   </div>
   )
 }
