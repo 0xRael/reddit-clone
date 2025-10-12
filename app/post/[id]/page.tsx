@@ -109,6 +109,10 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 		if (!user) {
 			return
 		}
+		
+		if (!post) {
+			return
+		}
 	  
 		const { data, error } = await supabase
 			.from("vote")
