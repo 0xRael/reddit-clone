@@ -76,7 +76,7 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 		`)
 		.eq('post_id', id)
 		
-		setReplies(fetched_replies)
+		setReplies(fetched_replies ?? [])
     }
 
     loadPost()
