@@ -1,16 +1,12 @@
 'use client'
 
+import Link from "next/link";
 import { FaRegThumbsUp, FaRegThumbsDown, FaShare } from "react-icons/fa6";
 import { FiMessageCircle } from "react-icons/fi";
 import { SlOptions } from "react-icons/sl";
 import { createClient } from "@/utils/supabase/component"
 import { useEffect, useState } from "react"
 import { formatDistanceToNow } from 'date-fns';
-
-type postVotesView = {
-	upvotes: number,
-	downvotes: number
-}
 
 type Post = {
   id: string
@@ -23,7 +19,8 @@ type Post = {
   communities: {
     name: string | null
   }
-  post_votes_view: postVotesView[]
+  post_votes_view: {upvotes: number,downvotes: number}[],
+  post_replies_view: {count: number}[]
 }
 
 const PostsList = ()=>{
@@ -45,6 +42,9 @@ const PostsList = ()=>{
 					post_votes_view (
 						upvotes,
 						downvotes
+					),
+					post_replies_view (
+						count
 					)
 				`)
 				.order("created_at", { ascending: false })
@@ -80,6 +80,17 @@ const PostsList = ()=>{
 		}
 	}
 	
+	function copyLink(postId: string) {
+	  const url = `${window.location.origin}/post/${postId}`
+	  navigator.clipboard.writeText(url)
+		.then(() => {
+		  alert("Link copied to clipboard!")
+		})
+		.catch((err) => {
+		  console.error("Failed to copy:", err)
+		})
+	}
+	
 	return (
 	<main className="flex h-full min-h-screen flex-col w-full max-w-2xl">
 		{ posts.map((post)=>{
@@ -94,9 +105,9 @@ const PostsList = ()=>{
 						<div className="ml-auto p-2 rounded-full hover:bg-white/10"><SlOptions /></div>
 					</div>
 					
-					<h1 className="text-lg text-gray-100 font-bold">{post.title}</h1>
+					<Link href={`/post/${post.id}`} className="w-full block text-lg text-gray-100 font-bold">{post.title}</Link>
 					
-					<p>{post.body}</p>
+					<Link href={`/post/${post.id}`} className="w-full">{post.body}</Link>
 					
 					<div className="flex space-x-2">
 						<div className="flex p-2 rounded-full bg-white/10">
@@ -116,15 +127,17 @@ const PostsList = ()=>{
 							</button>
 						</div>
 						
-						<div className="flex p-2 rounded-full bg-white/10 hover:bg-white/20">
+						<Link href={`/post/${post.id}`} className="flex p-2 rounded-full bg-white/10 hover:bg-white/20">
 							<FiMessageCircle/>
-							<p className="mx-2 text-sm">00</p>
-						</div>
+							<p className="mx-2 text-sm">{post.post_replies_view?.length
+								? post.post_replies_view[0].count
+								: 0}</p>
+						</Link>
 						
-						<div className="flex p-2 rounded-full bg-white/10 hover:bg-white/20">
+						<button onClick={() => copyLink(post.id)} className="flex p-2 rounded-full bg-white/10 hover:bg-white/20">
 							<FaShare/>
 							<p className="mx-2 text-sm">Share</p>
-						</div>
+						</button>
 					</div>
 				</div>
 			</div>
