@@ -118,7 +118,7 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 			.from("vote")
 			.insert({
 				user_id: user.id,
-				post_id: post.id,
+				post_id: post?.id ?? "",
 				type: voteType
 			})
 		
