@@ -279,7 +279,12 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 			})
 		}
 		
-	</div><CommunityInfo communityId={post.community_id}/></> : <></> }
+	</div>
+	{post.community_id ? 
+		<CommunityInfo communityId={post.community_id} />
+		: <></>
+	}
+	</> : <></> }
   </div>
   )
 }
