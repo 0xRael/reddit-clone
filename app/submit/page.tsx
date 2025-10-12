@@ -1,14 +1,39 @@
 'use client'
-import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/component'
 
 export default function PostingPage() {
-  const router = useRouter()
-  const supabase = createClient()
+	const searchParams = useSearchParams()
+	const router = useRouter()
+	const supabase = createClient()
+
+	const [title, setTitle] = useState('')
+	const [body, setBody] = useState('')
+	const [communityId, setCommunityId] = useState<String | null>(null)
+	const [communityName, setCommunityName] = useState<string | null>(null)
   
-  const [title, setTitle] = useState('')
-  const [body, setBody] = useState('')
+	useEffect(() => {
+	const id = searchParams.get('community')
+	setCommunityId(id)
+
+	async function fetchCommunity() {
+		if (!id) return;
+		const { data, error } = await supabase
+			.from('communities')
+			.select('name')
+			.eq('id', id)
+			.single()
+
+		if (error) {
+			console.error('Error fetching community:', error)
+		} else {
+			setCommunityName(data.name)
+		}
+	}
+
+	fetchCommunity()
+	}, [searchParams, supabase])
   
   async function post() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -21,7 +46,8 @@ export default function PostingPage() {
         .insert({
 			title: title,
 			body: body,
-			user_id: user.id
+			user_id: user.id,
+			community_id: communityId
 		})
 		
 	if (error) {
@@ -45,7 +71,7 @@ export default function PostingPage() {
 		{/* This is supposed to be a Dropbox */}
 		<button className="flex p-2 rounded-full bg-white/10 hover:bg-white/20 space-x-2">
 			<div className="bg-slate-400 rounded-full w-6 h-6"></div>
-			<div>Select a community</div>
+			<div>{communityName ?? <p>No community chosen</p>}</div>
 		</button>
 		
 		{/* Post Options */}
