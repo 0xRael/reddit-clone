@@ -3,7 +3,7 @@
 import { createClient } from '@/utils/supabase/component';
 import CommunityInfo from '@/components/CommunityInfo';
 import { FaRegThumbsUp, FaRegThumbsDown, FaShare } from "react-icons/fa6";
-import { FiMessageCircle } from "react-icons/fi";
+import { FiMessageCircle, FiTrash, FiCopy } from "react-icons/fi";
 import { SlOptions } from "react-icons/sl";
 import { formatDistanceToNow } from 'date-fns';
 import { useEffect, useState } from 'react'
@@ -41,9 +41,9 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 	const [post, setPost] = useState<Post | null>(null)
 	const [replies, setReplies] = useState<Reply[]>([])
 	const [comment, setComment] = useState('')
+	const [showDropdown, setShowDropdown] = useState(false)
 	
-	useEffect(() => {
-    const loadPost = async () => {
+	const loadPost = async () => {
 		const { id } = await props.params
 		
 		const { data: fetched_post } = await supabase
@@ -81,8 +81,9 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 		
 		setReplies(fetched_replies ?? [])
     }
-
-    loadPost()
+	
+	useEffect(() => {
+		loadPost()
 	}, [supabase])
 	
 	async function postComment() {
@@ -105,6 +106,9 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 			
 		if (error) {
 			console.error("An error ocurred when commenting:", error);
+		} else {
+			alert("Comment Success!");
+			loadPost();
 		}
 	}
 	
@@ -129,6 +133,19 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 		
 		if (error) {
 			console.error("Error voting:", error)
+		}
+	}
+	
+	const deletePost = async () => {
+		const { id } = await props.params
+		
+		const { error } = await supabase
+			.from("posts")
+			.delete()
+			.eq('id', id)
+		
+		if (!error) {
+			alert("Post deleted")
 		}
 	}
 	
@@ -163,6 +180,21 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 		})
 	}
 	
+	function copyText(text: string) {
+		if (!text) {
+			return;
+		}
+
+		navigator.clipboard.writeText(text)
+			.then(() => {
+			  alert("Your copy is ready for pasta!");
+			})
+			.catch((err) => {
+			  console.error("Failed to copy:", err);
+			});
+	}
+
+	
   return (
   <div className="w-full h-full justify-center flex relative">
 	{ post ? <><div className="w-full max-w-3xl">
@@ -172,7 +204,34 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 				<div className="mx-2">{post?.users.username}</div>
 				<div className="text-gray-400">•</div>
 				<div className="text-gray-400">{formatDistanceToNow(new Date(post?.created_at), { addSuffix: true })}</div>
-				<div className="ml-auto p-2 rounded-full hover:bg-white/10"><SlOptions /></div>
+				{/* Options button */}
+                <div className="ml-auto relative">
+                  <button
+                    onClick={() => setShowDropdown(!showDropdown)}
+                    className="p-2 rounded-full hover:bg-white/10"
+                  >
+                    <SlOptions />
+                  </button>
+
+                  {showDropdown && (
+                    <div className="absolute right-0 mt-2 w-32 bg-gray-800 border border-gray-700 rounded shadow-lg z-10">
+						<button
+						onClick={() => copyText(post.body ?? "")}
+						className="block flex w-full text-left p-4 text-sm hover:bg-gray-700"
+						>
+							<FiCopy size={20} className="mr-2" />
+							Copy Text
+						</button>
+						<button
+						onClick={deletePost}
+						className="block flex w-full text-left p-4 text-sm text-red-400 hover:bg-gray-700"
+						>
+							<FiTrash size={20} className="mr-2" />
+							Delete
+                        </button>
+                    </div>
+                  )}
+                </div>
 			</div>
 			
 			<h1 className="w-full block text-xl text-gray-100 font-bold">{post?.title}</h1>
