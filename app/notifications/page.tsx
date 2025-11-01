@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useEffect, useState } from "react"
 import { createClient } from "@/utils/supabase/component"
 import { formatDistanceToNow } from "date-fns"
@@ -66,26 +67,27 @@ export default function NotificationsPage() {
         console.error("Error fetching notifications:", error)
       } else {
         setNotifications(data ?? [])
+		markAllAsRead()
       }
     }
 
     loadNotifications()
-	markAllAsRead()
   }, [supabase])
 
   return (
-    <div className="max-w-2xl mx-auto p-6 w-full">
-      <h1 className="text-2xl font-bold mb-4 text-white">Notifications</h1>
+    <div className="max-w-4xl mx-auto p-6 w-full">
+      <h1 className="text-2xl w-full font-bold mb-4 text-white">Notifications</h1>
       <ul className="space-y-3 w-full">
         {notifications.length === 0 && (
           <p className="text-gray-400">No notifications yet.</p>
         )}
         {notifications.map((n) => (
-          <li
+          <Link
             key={n.id}
             className={`p-4 w-full flex ${
               n.read ? "hover:bg-white/10" : "bg-white/20 hover:bg-white/30"
             }`}
+			href={`${window.location.origin}/post/${n.post_id}`}
           >
 			<div className="bg-slate-400 rounded-full w-8 h-8 mr-3"></div>
 			<div>
@@ -104,7 +106,7 @@ export default function NotificationsPage() {
 				  {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
 				</div>
 			</div>
-          </li>
+          </Link>
         ))}
       </ul>
     </div>
