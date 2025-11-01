@@ -7,8 +7,7 @@ import { formatDistanceToNow } from "date-fns"
 
 type Notification = {
   id: string
-  user_id: string
-  actor_id: string | null
+  actor_id?: string | null
   type: string
   reply_id: string | null
   post_id: string | null
