@@ -97,8 +97,8 @@ export default function NotificationsPage() {
 				  {/* add more types as needed */}
 				</div>
 				<div className="text-gray-400">
-					{n.reply?.text
-				  ? n.reply.text.slice(0, 100) + (n.reply?.[0]?.text.length > 100 ? "…" : "")
+					{n.reply?.[0]?.text
+				  ? n.reply?.[0]?.text.slice(0, 100) + (n.reply?.[0]?.text.length > 100 ? "…" : "")
 				  : ""}
 			    </div>
 				<div className="text-xs text-gray-400">
