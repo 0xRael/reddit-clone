@@ -6,45 +6,72 @@ import { VscBell } from "react-icons/vsc"
 import { IoSearch } from "react-icons/io5"
 import { useEffect, useState } from "react"
 import { createClient } from "@/utils/supabase/component"
+import { usePathname } from "next/navigation"
 
 const Navbar = () => {
-  const supabase = createClient();
-  const [username, setUsername] = useState<string | null>(null);
+	const supabase = createClient();
+	const [username, setUsername] = useState<string | null>(null);
+	const [userId, setUserId] = useState<string | null>(null);
+	const [unreadCount, setUnreadCount] = useState<number>(0);
+	const pathname = usePathname()
 
-  useEffect(() => {
-    const loadUser = async () => {
-      // get the current session
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        setUsername(null)
-        return
-      }
+	useEffect(() => {
+		const loadUser = async () => {
+			// get the current session
+			const { data: { user } } = await supabase.auth.getUser()
+			if (!user) {
+				setUsername(null);
+				setUserId(user.id)
+				return
+			}
+			
+			setUserId(user.id);
 
-      // query your public.users table for the username
-      const { data, error } = await supabase
-        .from("users")
-        .select("username")
-        .eq("id", user.id)
-        .single()
+			const { data, error } = await supabase
+			.from("users")
+			.select("username")
+			.eq("id", user.id)
+			.single()
 
-      if (error) {
-        console.error("Error fetching username:", error)
-      } else {
-        setUsername(data?.username ?? user.email)
-      }
-    }
+			if (error) {
+				console.error("Error fetching username:", error)
+			} else {
+				setUsername(data?.username ?? user.email)
+			}
+		}
 
-    loadUser()
+		loadUser()
 
-    // keep it reactive on login/logout
-    const { data: listener } = supabase.auth.onAuthStateChange(() => {
-      loadUser()
-    })
+		// keep it reactive on login/logout
+		const { data: listener } = supabase.auth.onAuthStateChange(() => {
+			loadUser()
+		})
 
-    return () => {
-      listener.subscription.unsubscribe()
-    }
-  }, [supabase])
+		return () => {
+			listener.subscription.unsubscribe();
+		}
+	}, [supabase])
+	
+	const loadUnread = async () => {
+			if (!userId){
+				setUnreadCount(0);
+				return;
+			}
+			
+			const { count, error } = await supabase
+			.from("notifications")
+			.select("*", { count: "exact", head: true })
+			.eq("user_id", userId)
+			.eq("read", false);
+
+			if (!error && typeof count === "number") {
+				setUnreadCount(count);
+			}
+		};
+		
+	useEffect(() => {		
+		loadUnread();
+	}, [supabase, userId, pathname])
 
   return (
     <nav className="w-full h-14 max-w-screen fixed flex top-0 border-gray-600 border-b-1 bg-normal p-2">
@@ -64,9 +91,18 @@ const Navbar = () => {
 			<FaPlus size={22} className="mr-3" /> Create
 		  </Link>
 
-		  <Link href="/notifications" className="flex p-2 rounded-full hover:bg-white/20 space-x-2">
-			<VscBell size={22} />
-		  </Link>
+		    <Link
+			  href="/notifications"
+			  className="relative flex p-2 rounded-full hover:bg-white/20 space-x-2"
+			  onClick={() => setUnreadCount(0)}
+			>
+			  <VscBell size={22} />
+			  {unreadCount > 0 && (
+				<span className="absolute -top-1 right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+				  {unreadCount}
+				</span>
+			  )}
+			</Link>
 
           <div className="block mt-2">{username}</div>
           <div className="bg-slate-400 rounded-full my-1 w-8 h-8"></div>
