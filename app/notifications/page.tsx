@@ -66,7 +66,7 @@ export default function NotificationsPage() {
         console.error("Error fetching notifications:", error)
       } else {
 		console.log(data);
-        setNotifications(data ?? []);
+        setNotifications((data as unknown as Notification[]) ?? []);
 		markAllAsRead()
       }
     }
