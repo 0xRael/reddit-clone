@@ -21,7 +21,7 @@ const Navbar = () => {
 			const { data: { user } } = await supabase.auth.getUser()
 			if (!user) {
 				setUsername(null);
-				setUserId(user.id)
+				setUserId(null)
 				return
 			}
 			
