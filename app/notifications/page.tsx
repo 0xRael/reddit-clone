@@ -15,12 +15,12 @@ type Notification = {
   read: boolean
   actor?: {
     username: string
-  }[]
+  }
   reply?: {
 	  id: string,
 	  text: string,
 	  post_id: string
-  }[]
+  }
 }
 
 export default function NotificationsPage() {
@@ -65,7 +65,8 @@ export default function NotificationsPage() {
       if (error) {
         console.error("Error fetching notifications:", error)
       } else {
-        setNotifications(data ?? [])
+		console.log(data);
+        setNotifications((data as unknown as Notification[]) ?? []);
 		markAllAsRead()
       }
     }
@@ -91,14 +92,14 @@ export default function NotificationsPage() {
 			<div className="bg-slate-400 rounded-full w-8 h-8 mr-3"></div>
 			<div>
 				<div className="text-gray-300">
-				  <span className="font-bold">{n.actor?.[0]?.username ?? "Someone"}</span>{" "}
+				  <span className="font-bold">{n.actor?.username ?? "Someone"}</span>{" "}
 				  {n.type === "reply" && "replied to your post."}
 				  {n.type === "upvote" && "upvoted your post."}
 				  {/* add more types as needed */}
 				</div>
 				<div className="text-gray-400">
-					{n.reply?.[0]?.text
-				  ? n.reply?.[0]?.text.slice(0, 100) + (n.reply?.[0]?.text.length > 100 ? "…" : "")
+					{n.reply?.text
+				  ? n.reply?.text.slice(0, 100) + (n.reply?.text.length > 100 ? "…" : "")
 				  : ""}
 			    </div>
 				<div className="text-xs text-gray-400">
