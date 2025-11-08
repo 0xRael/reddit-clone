@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "UpYark",
+  title: "UpYarc",
   description: "Yet Another Reddit Clone.",
 };
 
