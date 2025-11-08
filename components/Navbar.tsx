@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from "next/link"
 import { FaPlus } from "react-icons/fa6"
 import { VscBell } from "react-icons/vsc"
@@ -75,7 +76,14 @@ const Navbar = () => {
 
   return (
     <nav className="w-full h-14 max-w-screen fixed flex top-0 border-gray-600 border-b-1 bg-normal p-2">
-      <Link href="/" className="text-xl font-bold mt-2 ml-5 min-w-60">UpYarc</Link>
+		<Link href="/" className="text-xl font-bold ml-5 min-w-60">
+			<Image
+				src="/title.png"
+				width={160}
+				height={30}
+				alt="UpYarc"
+				className="-mt-2" />
+		</Link>
 
       <div className="w-full flex justify-center items-center">
         <IoSearch size={20} className="relative left-8" />

@@ -17,7 +17,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "UpYarc",
-  description: "Yet Another Reddit Clone.",
+  description: "We're Up Yet Another Reddit Clone.",
+  icons: {
+    icon: '/icon.png',
+  },
 };
 
 export default function RootLayout({
