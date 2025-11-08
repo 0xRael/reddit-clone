@@ -75,7 +75,7 @@ const Navbar = () => {
 
   return (
     <nav className="w-full h-14 max-w-screen fixed flex top-0 border-gray-600 border-b-1 bg-normal p-2">
-      <Link href="/" className="text-xl font-bold mt-2 ml-5 min-w-60">Home</Link>
+      <Link href="/" className="text-xl font-bold mt-2 ml-5 min-w-60">UpNest</Link>
 
       <div className="w-full flex justify-center items-center">
         <IoSearch size={20} className="relative left-8" />
