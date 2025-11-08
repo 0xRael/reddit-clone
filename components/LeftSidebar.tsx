@@ -13,18 +13,22 @@ import { useState, useEffect } from 'react';
 const SIDEBAR_ITEMS = [
 	{
 		title:'Home',
+		link:'/',
 		icon:IoHomeOutline
 	},
 	{
 		title:'Popular',
+		link:'/',
 		icon:LuCircleArrowOutUpRight
 	},
 	{
 		title:'Explore',
+		link:'/explore',
 		icon:BsPeople
 	},
 	{
 		title:'All',
+		link:'/',
 		icon:PiChartBarFill
 	}
 ]
@@ -73,7 +77,7 @@ const LeftSidebar = ()=>{
 			{
 				/* Main Navigation */
 				SIDEBAR_ITEMS.map((item)=>{
-					return (<Link className="flex relative rounded-md p-2 hover:bg-white/10" href={`/${item.title.toLowerCase()}`} key={item.title}>
+					return (<Link className="flex relative rounded-md p-2 hover:bg-white/10" href={`${item.link.toLowerCase()}`} key={item.title}>
 						<div className="ml-2 mr-4">
 							<item.icon size={22}/>
 						</div>
