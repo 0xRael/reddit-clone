@@ -64,7 +64,7 @@ export default function PostingPage() {
           e.preventDefault()
 		  post()
         }}
-		className="space-y-4"
+		className="w-full max-w-2xl space-y-4"
       >
 		<h1 className="text-2xl font-bold">Create post</h1>
 		
@@ -86,14 +86,13 @@ export default function PostingPage() {
 			placeholder="Title"
 			type="text"
 			onChange={(e) => setTitle(e.target.value)}
-			className="block p-3 border-gray-700 hover:border-gray-500 hover:bg-white/5 border-1 rounded-xl w-2xl placeholder:text-gray-400"
+			className="block p-3 border-gray-700 hover:border-gray-500 hover:bg-white/5 border-1 rounded-xl w-full max-w-2xl placeholder:text-gray-400"
 			/>
 		
-		<input
+		<textarea
 			placeholder="Body Text"
-			type="text"
 			onChange={(e) => setBody(e.target.value)}
-			className="block p-3 border-gray-700 hover:border-gray-500 hover:bg-white/5 border-1 rounded-xl w-2xl placeholder:text-gray-400"
+			className="block p-3 border-gray-700 hover:border-gray-500 hover:bg-white/5 border-1 rounded-xl w-full max-w-2xl placeholder:text-gray-400"
 			/>
 		
 		<div className="flex">

@@ -130,7 +130,7 @@ const PostsList = ({ communityId }: Props)=>{
 	}
 	
 	return (
-	<main className="flex h-full min-h-screen flex-col w-full max-w-2xl">
+	<main className="flex h-full min-h-screen flex-col w-full lg:max-w-2xl max-lg:px-4">
 		{ posts.map((post)=>{
 			return (
 			<div className="border-t-1 border-gray-700" key={`${post.id}`}>

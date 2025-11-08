@@ -73,7 +73,7 @@ const LeftSidebar = ()=>{
 	}, [supabase])
 	
 	return (
-		<section className="sticky top-14 w-80 h-[calc(100vh-3.5rem)] overflow-y-hidden hover:overflow-y-scroll overflow-x-hidden overscroll-contain border-r-1 border-gray-600 p-5">
+		<section className="xl:sticky max-xl:hidden top-14 w-80 h-[calc(100vh-3.5rem)] overflow-y-hidden hover:overflow-y-scroll overflow-x-hidden overscroll-contain border-r-1 border-gray-600 p-5">
 			{
 				/* Main Navigation */
 				SIDEBAR_ITEMS.map((item)=>{
