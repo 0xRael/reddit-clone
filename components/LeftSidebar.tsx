@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { createClient } from '@/utils/supabase/component';
 import { FaPlus } from "react-icons/fa6"
+import { FaTimes, FaBars } from "react-icons/fa"
 import { IoHomeOutline } from "react-icons/io5";
 import { LuCircleArrowOutUpRight } from "react-icons/lu";
 import { BsPeople } from "react-icons/bs";
@@ -46,7 +47,12 @@ const LeftSidebar = ()=>{
 	const { openCommunityCreator } = useModal()
 	
 	const supabase = createClient()
+	const [isOpen, setIsOpen] = useState<boolean>(false);
 	const [joins, setJoins] = useState<Join[]>([])
+	
+	function toggleSidebar () {
+		setIsOpen(!isOpen);
+	}
 	
 	useEffect(() => {
 		const load = async () => {	
@@ -73,7 +79,14 @@ const LeftSidebar = ()=>{
 	}, [supabase])
 	
 	return (
-		<section className="xl:sticky max-xl:hidden top-14 w-80 h-[calc(100vh-3.5rem)] overflow-y-hidden hover:overflow-y-scroll overflow-x-hidden overscroll-contain border-r-1 border-gray-600 p-5">
+		<>
+		<button
+		  onClick={toggleSidebar}
+		  className="fixed top-2 left-2 z-50 p-2 text-white rounded-md xl:hidden"
+		>
+		  {isOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
+		</button>
+		<section className={`xl:sticky ${isOpen ? 'max-xl:fixed max-xl:bg-black/70 max-xl:backdrop-blur-md max-lg:-ml-4 max-lg:pl-4 max-xl:z-2' : 'max-xl:hidden'} top-14 w-80 h-[calc(100vh-3.5rem)] overflow-y-hidden hover:overflow-y-scroll overflow-x-hidden overscroll-contain border-r-1 border-gray-600 p-5`}>			
 			{
 				/* Main Navigation */
 				SIDEBAR_ITEMS.map((item)=>{
@@ -115,6 +128,7 @@ const LeftSidebar = ()=>{
 				})
 			}
 		</section>
+		</>
 	)
 }
 
