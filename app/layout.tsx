@@ -36,7 +36,7 @@ export default function RootLayout({
 		<ModalProvider>
 			<div className="h-14 w-full max-w-screen"></div>
 			
-			<div className="w-full h-full flex relative text-gray-300 bg-brand">
+			<div className="w-full h-full flex relative text-gray-300 bg-brand max-lg:px-4">
 			
 				<LeftSidebar/>
 				

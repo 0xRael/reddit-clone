@@ -75,8 +75,8 @@ const Navbar = () => {
 	}, [supabase, userId, pathname])
 
   return (
-    <nav className="w-full h-14 max-w-screen fixed flex top-0 border-gray-600 border-b-1 bg-normal p-2">
-		<Link href="/" className="text-xl font-bold ml-5 lg:min-w-60 max-lg:min-w-10">
+    <nav className="w-full h-14 max-w-screen fixed flex top-0 border-gray-600 border-b-1 bg-black/60 backdrop-blur-sm p-2">
+		<Link href="/" className="text-xl font-bold ml-5 lg:min-w-60 max-lg:min-w-10 max-xl:ml-10">
 			<Image
 				src="/title.png"
 				width={160}
