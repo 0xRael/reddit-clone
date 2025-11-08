@@ -1,6 +1,6 @@
 const RightSection = () => {
 	return (
-		<section className="sticky top-14 w-74 h-[calc(100vh-3.5rem)] overflow-y-hidden hover:overflow-y-scroll overflow-x-hidden overscroll-contain py-5 ml-5">
+		<section className="lg:sticky max-lg:hidden top-14 w-74 h-[calc(100vh-3.5rem)] overflow-y-hidden hover:overflow-y-scroll overflow-x-hidden overscroll-contain py-5 ml-5">
 			<div className="bg-black text-gray-400 rounded-xl w-full py-5">
 				<h6 className="text-sm text-gray-500 mb-3 mx-5">RECENT POSTS</h6>
 				{
