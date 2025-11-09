@@ -85,7 +85,7 @@ export default function LoginPage() {
 		<button
           type="button"
           onClick={(e) => {
-			await supabase.auth.signInWithOAuth({
+			supabase.auth.signInWithOAuth({
 			  provider: 'google',
 			  options: {
 				redirectTo: `https://reddit-clone-eta-two.vercel.app/auth/callback`,
