@@ -88,7 +88,7 @@ export default function LoginPage() {
 			await supabase.auth.signInWithOAuth({
 			  provider: 'google',
 			  options: {
-				redirectTo: `http://example.com/auth/callback`,
+				redirectTo: `https://reddit-clone-eta-two.vercel.app/auth/callback`,
 			  },
 			})
 		  }}
