@@ -92,9 +92,9 @@ export default function LoginPage() {
 			  },
 			})
 		  }}
-          className="bg-white/20 hover:bg-white/40 rounded-full p-2 w-full"
+          className="bg-white/20 hover:bg-white/40 rounded-full p-2 w-full flex"
 		>
-			<FaGoogle className="mr-3" size={22} /> Log In with google
+			<FaGoogle className="mr-3" size={22} /> <p>Log In with google</p>
 		</button>
 
         {/* Transition wrapper */}
