@@ -2,6 +2,7 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { createClient } from '@/utils/supabase/component'
+import { FaGoogle } from "react-icons/fa";
 
 export default function LoginPage() {
   const router = useRouter()
@@ -80,6 +81,21 @@ export default function LoginPage() {
         <h1 className="text-xl font-semibold text-center">
           {isSignUp ? 'Sign Up' : 'Log In'}
         </h1>
+		
+		<button
+          type="button"
+          onClick={(e) => {
+			supabase.auth.signInWithOAuth({
+			  provider: 'google',
+			  options: {
+				redirectTo: `https://reddit-clone-eta-two.vercel.app/auth/callback`,
+			  },
+			})
+		  }}
+          className="bg-white/20 hover:bg-white/40 rounded-full p-2 w-full flex"
+		>
+			<FaGoogle className="mr-3" size={22} /> <p>Log In with google</p>
+		</button>
 
         {/* Transition wrapper */}
         <div
