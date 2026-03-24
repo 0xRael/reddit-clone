@@ -7,6 +7,7 @@ import { FiMessageCircle, FiTrash, FiCopy } from "react-icons/fi";
 import { SlOptions } from "react-icons/sl";
 import { formatDistanceToNow } from 'date-fns';
 import { useEffect, useState } from 'react'
+import { useRecentPosts } from "@/hooks/useRecentPosts";
 
 type Post = {
   id: string
@@ -42,6 +43,7 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 	const [replies, setReplies] = useState<Reply[]>([])
 	const [comment, setComment] = useState('')
 	const [showDropdown, setShowDropdown] = useState(false)
+	const { addPostId } = useRecentPosts(); // To register into recent posts
 	
 	const loadPost = async () => {
 		const { id } = await props.params
@@ -67,7 +69,8 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 		.eq('id', id)
 		.single<Post>()
 		
-		setPost(fetched_post)
+		setPost(fetched_post);
+		addPostId(id);
 		
 		const { data: fetched_replies } = await supabase
 		.from('replies')
