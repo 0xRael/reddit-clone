@@ -2,18 +2,24 @@
 
 import Image from 'next/image'
 import Link from "next/link"
+import { useEffect, useRef, useState } from "react"
+import { createClient } from "@/utils/supabase/component"
+import { usePathname } from "next/navigation"
+// Icons
 import { FaPlus } from "react-icons/fa6"
 import { VscBell } from "react-icons/vsc"
 import { IoSearch } from "react-icons/io5"
-import { useEffect, useState } from "react"
-import { createClient } from "@/utils/supabase/component"
-import { usePathname } from "next/navigation"
+import { VscSignOut } from "react-icons/vsc"
+import { IoSettingsOutline } from "react-icons/io5";
 
 const Navbar = () => {
 	const supabase = createClient();
 	const [username, setUsername] = useState<string | null>(null);
 	const [userId, setUserId] = useState<string | null>(null);
 	const [unreadCount, setUnreadCount] = useState<number>(0);
+	const [menuOpen, setMenuOpen] = useState(false);
+	// So that we can detect outside clicks for the dropdown menu
+	const menuRef = useRef<HTMLDivElement | null>(null);
 	const pathname = usePathname()
 
 	useEffect(() => {
@@ -52,7 +58,28 @@ const Navbar = () => {
 			listener.subscription.unsubscribe();
 		}
 	}, [supabase])
-	
+
+	useEffect(() => {
+		const handleOutsideClick = (event: MouseEvent) => {
+			if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+				setMenuOpen(false)
+			}
+		}
+
+		window.addEventListener("mousedown", handleOutsideClick)
+		return () => {
+			window.removeEventListener("mousedown", handleOutsideClick)
+		}
+	}, [])
+
+	const handleSignOut = async () => {
+		await supabase.auth.signOut()
+		setUsername(null)
+		setUserId(null)
+		setUnreadCount(0)
+		setMenuOpen(false)
+	}
+
 	const loadUnread = async () => {
 			if (!userId){
 				setUnreadCount(0);
@@ -118,7 +145,44 @@ const Navbar = () => {
 			  )}
 			</Link>
 
-          <div className="block mt-2">{username}</div>
+          <div ref={menuRef} className="relative block">
+            <button
+              type="button"
+              onClick={() => setMenuOpen((open) => !open)}
+              className="block mt-2 px-2 py-1 rounded hover:bg-white/20 cursor-pointer"
+            >
+              {username}
+            </button>
+
+            {menuOpen && (
+              <div className="absolute right-0 z-20 mt-2 w-44 overflow-hidden rounded-xl border border-white/10 bg-slate-900/95 shadow-xl backdrop-blur-xl">
+                <Link
+                  href="/settings"
+                  className="flex px-4 py-2 text-sm text-white hover:bg-white/10"
+                  onClick={() => setMenuOpen(false)}
+                >
+            		<div className="ml-1 mr-2">
+						<IoSettingsOutline size={20}/>
+					</div>
+					<div>
+						Settings
+					</div>
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="flex w-full px-4 py-2 text-left text-sm text-white hover:bg-white/10 cursor-pointer"
+                >
+                	<div className="ml-1 mr-2">
+						<VscSignOut size={20}/>
+					</div>
+					<div>
+						Logout
+					</div>
+                </button>
+              </div>
+            )}
+          </div>
           <div className="bg-slate-400 rounded-full my-1 w-8 h-8"></div>
         </div>
       ) : (
