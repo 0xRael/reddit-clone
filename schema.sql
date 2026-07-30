@@ -28,6 +28,7 @@ create table public.posts (
   body text null,
   user_id uuid not null,
   community_id uuid null,
+  image_url text null,
   created_at timestamp with time zone null default now(),
   constraint posts_pkey primary key (id),
   constraint posts_community_id_fkey foreign KEY (community_id) references communities (id) on delete set null,
@@ -195,3 +196,25 @@ $$;
 create trigger on_auth_user_created
 after insert on auth.users
 for each row execute procedure public.handle_new_user();
+
+
+
+
+-- Storage Buckets
+
+-- 1. Allow anyone (logged in or logged out) to view images
+CREATE POLICY "Public Read Access"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'post_images');
+
+-- 2. Allow logged-in users to upload images
+CREATE POLICY "Authenticated Users Upload"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (bucket_id = 'post_images');
+
+-- 3. Allow users to delete their own uploaded images
+CREATE POLICY "Users Delete Own Images"
+ON storage.objects FOR DELETE
+TO authenticated
+USING (bucket_id = 'post_images' AND auth.uid() = owner);

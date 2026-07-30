@@ -109,7 +109,15 @@ const PostsList = ({ communityId, searchQuery }: Props)=>{
 					
 					<Link href={`/post/${post.id}`} className="w-full block text-lg text-gray-100 font-bold">{post.title}</Link>
 					
-					<Link href={`/post/${post.id}`} className="w-full">{post.body}</Link>
+					{post.image_url ?
+						<Link href={`/post/${post.id}`} className="w-full justify-center">
+							<img 
+								src={post.image_url}
+								alt={post.title ?? ""}
+							/>
+						</Link>:
+						<Link href={`/post/${post.id}`} className="w-full">{post.body}</Link>
+					}
 					
 					<div className="flex space-x-2">
 						<div className="flex p-2 rounded-full bg-white/10">

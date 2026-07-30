@@ -1,17 +1,12 @@
 'use client'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/utils/supabase/component'
 import { IoIosArrowDown } from "react-icons/io";
 
-type Join = {
-  id: string
-  user_id: string
-  community_id: string
-  communities: {
-    name: string
-  }
-}
+import { Join } from '@/types'
+
+const MAX_FILE_SIZE = 3 * 1024 * 1024 // 3MB in bytes
 
 export default function PostingPage() {
 	const searchParams = useSearchParams()
@@ -23,6 +18,10 @@ export default function PostingPage() {
 	const [body, setBody] = useState('')
 	const [communityId, setCommunityId] = useState<string | null>(null)
 	const [communityName, setCommunityName] = useState<string | null>(null)
+
+	const [imageFile, setImageFile] = useState<File | null>(null)
+	const [isUploading, setIsUploading] = useState<boolean>(false)
+	const fileInputRef = useRef<HTMLInputElement | null>(null)
   
 	// Dropdown states
 	const [joinedCommunities, setJoinedCommunities] = useState<Join[]>([])
@@ -79,26 +78,61 @@ export default function PostingPage() {
 	}, [supabase])
   
   async function post() {
+    setIsUploading(true)
+
     const { data: { user } } = await supabase.auth.getUser()
-	if (!user) {
-		return
-	}
-	
-	const { data, error } = await supabase
+    if (!user) {
+        setIsUploading(false)
+        return;
+    }
+    
+    let imageUrl = null
+
+    if (imageFile) {
+        // Grab the extension (e.g. .png) and create a unique filename using Date.now()
+        const fileExt = imageFile.name.split('.').pop()
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
+        
+        // Storing them in a folder named after the user's ID keeps the bucket organized
+        const filePath = `${user.id}/${fileName}` 
+
+        const { error: uploadError } = await supabase.storage
+            .from('post_images')
+            .upload(filePath, imageFile)
+            
+        if (uploadError) {
+            console.error("Error uploading image:", uploadError)
+            alert("Failed to upload image.")
+            setIsUploading(false)
+            return
+        }
+        
+        // Get the public URL from the bucket
+        const { data } = supabase.storage
+            .from('post_images')
+            .getPublicUrl(filePath)
+            
+        imageUrl = data.publicUrl
+    }
+    
+    // Save the post to the database (now including the imageUrl)
+    const { error } = await supabase
         .from("posts")
         .insert({
-			title: title,
-			body: body,
-			user_id: user.id,
-			community_id: communityId
-		})
-		
-	if (error) {
-		console.error("An error ocurred when posting:", error);
-	} else {
-		router.push("/");
-	}
-  }
+            title: title,
+            body: body,
+            user_id: user.id,
+            community_id: communityId,
+            image_url: imageUrl 
+        })
+        
+    if (error) {
+        console.error("An error ocurred when posting:", error);
+        setIsUploading(false)
+    } else {
+        router.push("/");
+    }
+}
   
   return (
     <div className="w-full h-full min-h-screen flex items-center justify-center">
@@ -166,12 +200,63 @@ export default function PostingPage() {
 			)}
 		</div>
 				
+		{/* Hidden File Input */}
+		<input 
+			type="file" 
+			ref={fileInputRef}
+			accept="image/*"
+			className="hidden" 
+			onChange={(e) => {
+				const selectedFile = e.target.files?.[0]
+				if (!selectedFile) return
+
+				// Check if file size exceeds 3MB
+				if (selectedFile.size > MAX_FILE_SIZE) {
+					alert("File is too large! Please choose an image under 3MB.")
+					e.target.value = '' // Reset the input value so selecting the same file again triggers onChange
+					return
+				}
+
+				setImageFile(selectedFile)
+			}}
+		/>
+
 		{/* Post Options */}
-		<div className="mt-7 space-x-5 text-white">
-			<button type="button" className="p-3 border-blue-400 border-b-4 hover:bg-white/10">Text</button>
-			<button type="button"  className="p-3 hover:bg-white/10">Images & Video</button>
-			<button type="button"  className="p-3 hover:bg-white/10">Link</button>
-			<button type="button"  className="p-3 hover:bg-white/10">Poll</button>
+		<div className="mt-7 space-x-5 text-white border-b border-gray-700 flex items-center">
+			<button type="button" className="p-3 border-blue-400 border-b-2 hover:bg-white/10 font-medium">
+				Text
+			</button>
+			
+			{/* Images & Video Button - Triggers hidden file input */}
+			<button 
+				type="button" 
+				onClick={() => fileInputRef.current?.click()}
+				className="p-3 hover:bg-white/10 text-gray-400 flex items-center space-x-2"
+			>
+				<span>Images & Video</span>
+				{imageFile && (
+					<span className="text-xs bg-blue-600 text-white pl-2 pr-1 py-0.5 rounded-full flex items-center space-x-1 max-w-[160px]">
+						<span className="truncate">{imageFile.name}</span>
+						<span 
+							role="button"
+							onClick={(e) => {
+								e.stopPropagation() // Prevents opening the file picker again!
+								setImageFile(null)
+								if (fileInputRef.current) {
+									fileInputRef.current.value = '' // Clears the native input
+								}
+							}}
+							className="hover:bg-blue-700/80 rounded-full w-4 h-4 inline-flex items-center justify-center text-[10px] font-bold text-white transition-colors cursor-pointer"
+							title="Remove image"
+						>
+							✕
+						</span>
+					</span>
+				)}
+			</button>
+			
+			<button type="button" className="p-3 hover:bg-white/10 text-gray-400">Link</button>
+			<button type="button" className="p-3 hover:bg-white/10 text-gray-400">Poll</button>
 		</div>
 		
 		<input

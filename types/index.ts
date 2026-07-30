@@ -12,6 +12,7 @@ export type Post = {
   body: string | null
   community_id: string | null
   created_at: string
+  image_url: string | null
   users: {
     username: string
   }
@@ -49,5 +50,14 @@ export type Notification = {
       id: string,
       text: string,
       post_id: string
+  }
+}
+
+export type Join = {
+  id: string
+  user_id: string
+  community_id: string
+  communities: {
+    name: string
   }
 }

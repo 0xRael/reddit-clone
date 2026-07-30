@@ -11,6 +11,8 @@ import { PiChartBarFill } from "react-icons/pi";
 import { useModal } from '@/components/ModalProvider';
 import { useState, useEffect } from 'react';
 
+import { Join } from '@/types'
+
 const SIDEBAR_ITEMS = [
 	{
 		title:'Home',
@@ -33,15 +35,6 @@ const SIDEBAR_ITEMS = [
 		icon:PiChartBarFill
 	}
 ]
-
-type Join = {
-  id: string
-  user_id: string
-  community_id: string
-  communities: {
-    name: string
-  }
-}
 
 const LeftSidebar = ()=>{
 	const { openCommunityCreator } = useModal()

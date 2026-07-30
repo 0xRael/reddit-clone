@@ -115,13 +115,30 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 	
 	const deletePost = async () => {
 		const { id } = await props.params
-		
+		// 1. If the post has an image, delete it from Storage first
+		if (post?.image_url) {
+			const filePath = post.image_url.split('/post_images/')[1]
+			
+			if (filePath) {
+				const { error: storageError } = await supabase.storage
+					.from('post_images')
+					.remove([filePath])
+
+				if (storageError) {
+					console.error("Failed to delete image from storage:", storageError)
+				}
+			}
+		}
+
 		const { error } = await supabase
-			.from("posts")
+			.from('posts')
 			.delete()
 			.eq('id', id)
-		
-		if (!error) {
+
+		if (error) {
+			console.error("Failed to delete post row:", error)
+			alert("Could not delete post.")
+		} else {
 			alert("Post deleted")
 		}
 	}
@@ -213,6 +230,13 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 			
 			<h1 className="w-full block text-xl text-gray-100 font-bold">{post?.title}</h1>
 			
+			{post.image_url &&
+				<img 
+					src={post.image_url}
+					alt={post.title ?? ""}
+				/>
+			}
+
 			<p className="w-full">{post?.body}</p>
 			
 			<div className="flex space-x-2">
