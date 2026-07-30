@@ -6,19 +6,11 @@ import { useRecentPosts } from "@/hooks/useRecentPosts";
 import { formatDistanceToNow } from 'date-fns';
 import Link from "next/link";
 
-// Reusing your Post type structure
-type RecentPost = {
-    id: string;
-    title: string | null;
-    created_at: string;
-    communities: { name: string | null } | null;
-    post_votes_view: { upvotes: number; downvotes: number }[];
-    post_replies_view: { count: number }[];
-};
+import { Post } from "@/types"
 
 const RightSection = () => {
     const { postIds, clearPosts } = useRecentPosts();
-    const [posts, setPosts] = useState<RecentPost[]>([]);
+    const [posts, setPosts] = useState<Post[]>([]);
     const supabase = createClient();
 
     useEffect(() => {
@@ -31,10 +23,20 @@ const RightSection = () => {
             const { data, error } = await supabase
                 .from("posts")
                 .select(`
-                    *, id, title, created_at,
-                    communities ( name ),
-                    post_votes_view ( upvotes, downvotes ),
-                    post_replies_view ( count )
+                    *,
+                    users (
+                        username
+                    ),
+                    communities (
+                        name
+                    ),
+                    post_votes_view (
+                        upvotes,
+                        downvotes
+                    ),
+                    post_replies_view (
+                        count
+                    )
                 `)
                 .in("id", postIds);
 
@@ -43,7 +45,7 @@ const RightSection = () => {
                 // so we manually sort them to match the postIds order (most recent first)
                 const sortedData = postIds
                     .map(id => data.find(p => p.id === id))
-                    .filter(Boolean) as RecentPost[];
+                    .filter(Boolean) as Post[];
                 
                 setPosts(sortedData);
             }

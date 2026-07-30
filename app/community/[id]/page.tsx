@@ -8,13 +8,7 @@ import { useState, useEffect } from 'react';
 import { FaPlus } from "react-icons/fa6";
 import { SlOptions } from "react-icons/sl";
 
-type Community = {
-  id: string
-  name: string | null
-  description: string | null
-  created_at: string,
-  owner_id: string
-}
+import { Community } from '@/types'
 
 export default function CommunityPage(props: { params: Promise<{ id: string }> }) {
 	const supabase = createClient()

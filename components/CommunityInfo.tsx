@@ -6,13 +6,7 @@ import { useState, useEffect } from 'react';
 import { LuCakeSlice } from "react-icons/lu";
 import { format } from 'date-fns'
 
-type Community = {
-  id: string
-  name: string | null
-  description: string | null
-  created_at: string,
-  owner_id: string
-}
+import { Community } from '@/types'
 
 type Props = {
 	communityId: string;

@@ -9,33 +9,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { useEffect, useState } from 'react'
 import { useRecentPosts } from "@/hooks/useRecentPosts";
 
-type Post = {
-  id: string
-  title: string | null
-  body: string | null
-  community_id: string | null
-  created_at: string
-  users: {
-    username: string
-  }
-  communities: {
-    name: string | null
-  }
-  post_votes_view: {upvotes: number,downvotes: number}[],
-  post_replies_view: {count: number}[]
-}
-
-type Reply = {
-	id: string,
-	user_id: string,
-	post_id: string | null,
-	reply_id: string | null,
-	text: string,
-	created_at: string,
-	users: {
-		username: string
-	}
-}
+import { Post, Reply } from '@/types'
 
 export default function PostPage(props: { params: Promise<{ id: string }> }) {
 	const supabase = createClient()

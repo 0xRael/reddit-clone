@@ -6,13 +6,7 @@ import PostsList from '@/components/PostsList'
 import { createClient } from "@/utils/supabase/component"
 import { useEffect, useState } from "react"
 
-type Community = {
-  id: string
-  name: string | null
-  description: string | null
-  created_at: string,
-  owner_id: string
-}
+import { Community } from '@/types'
 
 export default function SearchingPage() {
 	const searchParams = useSearchParams()

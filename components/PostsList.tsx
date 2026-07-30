@@ -8,20 +8,7 @@ import { createClient } from "@/utils/supabase/component"
 import { useEffect, useState } from "react"
 import { formatDistanceToNow } from 'date-fns';
 
-type Post = {
-  id: string
-  title: string | null
-  body: string | null
-  created_at: string
-  users: {
-    username: string
-  }
-  communities: {
-    name: string | null
-  }
-  post_votes_view: {upvotes: number,downvotes: number}[],
-  post_replies_view: {count: number}[]
-}
+import { Post } from "@/types"
 
 type Props = {
 	communityId?: string | null;

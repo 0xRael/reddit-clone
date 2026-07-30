@@ -5,23 +5,7 @@ import { useEffect, useState } from "react"
 import { createClient } from "@/utils/supabase/component"
 import { formatDistanceToNow } from "date-fns"
 
-type Notification = {
-  id: string
-  actor_id?: string | null
-  type: string
-  reply_id: string | null
-  post_id: string | null
-  created_at: string
-  read: boolean
-  actor?: {
-    username: string
-  }
-  reply?: {
-	  id: string,
-	  text: string,
-	  post_id: string
-  }
-}
+import { Notification } from '@/types'
 
 export default function NotificationsPage() {
   const supabase = createClient()
