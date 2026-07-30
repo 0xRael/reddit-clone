@@ -25,78 +25,55 @@ type Post = {
 
 type Props = {
 	communityId?: string | null;
+	searchQuery?: string | null;
 }
 
-const PostsList = ({ communityId }: Props)=>{
+const PostsList = ({ communityId, searchQuery }: Props)=>{
 	const supabase = createClient()
 	const [posts, setPosts] = useState<Post[]>([])
 	
 	useEffect(() => {
-		const loadPosts = async () => {
-			const { data, error } = await supabase
-				.from("posts")
-				.select(`
-					*,
-					users (
-						username
-					),
-					communities (
-						name
-					),
-					post_votes_view (
-						upvotes,
-						downvotes
-					),
-					post_replies_view (
-						count
-					)
-				`)
-				.order("created_at", { ascending: false })
-			
-			console.log(data)
-			setPosts(data ?? [])
-			
-			if (error) {
-				console.error("Error fetching posts:", error)
-			}
-		}
-		
-		const loadPostsFromCommunity = async () => {
-			const { data, error } = await supabase
-				.from("posts")
-				.select(`
-					*,
-					users (
-						username
-					),
-					communities (
-						name
-					),
-					post_votes_view (
-						upvotes,
-						downvotes
-					),
-					post_replies_view (
-						count
-					)
-				`)
-				.eq("community_id", communityId ?? "")
-				.order("created_at", { ascending: false })
-			
-			console.log(data)
-			setPosts(data ?? [])
-			
-			if (error) {
-				console.error("Error fetching posts:", error)
-			}
-		}
-		
-		if(communityId){
-			loadPostsFromCommunity()
-		} else {
-			loadPosts()
-		}
-	}, [supabase])
+        const fetchPosts = async () => {
+            let query = supabase
+                .from("posts")
+                .select(`
+                    *,
+                    users (
+                        username
+                    ),
+                    communities (
+                        name
+                    ),
+                    post_votes_view (
+                        upvotes,
+                        downvotes
+                    ),
+                    post_replies_view (
+                        count
+                    )
+                `)
+                .order("created_at", { ascending: false });
+            
+            if (communityId) {
+                query = query.eq("community_id", communityId);
+            }
+            
+            if (searchQuery) {
+                // ilike is case-insensitive. The % signs act as wildcards.
+                query = query.or(`title.ilike.%${searchQuery}%,body.ilike.%${searchQuery}%`);
+            }
+            
+            const { data, error } = await query;
+            
+            if (error) {
+                console.error("Error fetching posts:", error);
+            } else {
+                setPosts(data ?? []);
+            }
+        }
+        
+        fetchPosts();
+    }, [supabase, communityId, searchQuery])
 	
 	const votePost = async (postId: string, voteType: number) => {
 		const { data: { user } } = await supabase.auth.getUser()

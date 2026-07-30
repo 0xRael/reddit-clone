@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import Link from "next/link"
+import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from "react"
 import { createClient } from "@/utils/supabase/component"
 import { usePathname } from "next/navigation"
@@ -13,6 +14,8 @@ import { VscSignOut } from "react-icons/vsc"
 import { IoSettingsOutline } from "react-icons/io5";
 
 const Navbar = () => {
+	const router = useRouter()
+	const [searchQuery, setSearchQuery] = useState('')
 	const supabase = createClient();
 	const [username, setUsername] = useState<string | null>(null);
 	const [userId, setUserId] = useState<string | null>(null);
@@ -72,6 +75,14 @@ const Navbar = () => {
 		}
 	}, [])
 
+	const handleSearch = (e: React.FormEvent) => {
+		e.preventDefault() // Prevents the page from reloading
+		if (searchQuery.trim()) {
+			// encodeURIComponent ensures spaces and special characters don't break the URL
+			router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
+		}
+	}
+
 	const handleSignOut = async () => {
 		await supabase.auth.signOut()
 		setUsername(null)
@@ -118,13 +129,16 @@ const Navbar = () => {
 				className="lg:hidden" />
 		</Link>
 
-      <div className="w-full flex justify-center items-center">
-        <IoSearch size={20} className="relative left-8" />
+      <form onSubmit={handleSearch} className="w-full flex justify-center items-center">
+        <IoSearch size={20} className="relative left-8 pointer-events-none text-gray-400" />
         <input
+          type="search"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search"
           className="bg-white/10 hover:bg-white/20 w-full max-w-xl py-2 pr-5 pl-10 rounded-full"
         />
-      </div>
+      </form>
 
 	  {username ? (
         <div className="block flex space-x-1">
