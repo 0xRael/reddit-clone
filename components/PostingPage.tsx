@@ -61,7 +61,7 @@ export default function PostingPage() {
 			const { data, error } = await supabase
 				.from('joins')
 				.select(`
-					community_id,
+					*,
 					communities (
 						name
 					)
