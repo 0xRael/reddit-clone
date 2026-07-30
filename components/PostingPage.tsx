@@ -2,17 +2,33 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/component'
+import { IoIosArrowDown } from "react-icons/io";
+
+type Join = {
+  id: string
+  user_id: string
+  community_id: string
+  communities: {
+    name: string
+  }
+}
 
 export default function PostingPage() {
 	const searchParams = useSearchParams()
 	const router = useRouter()
 	const supabase = createClient()
 
+	// Form states
 	const [title, setTitle] = useState('')
 	const [body, setBody] = useState('')
 	const [communityId, setCommunityId] = useState<string | null>(null)
 	const [communityName, setCommunityName] = useState<string | null>(null)
   
+	// Dropdown states
+	const [joinedCommunities, setJoinedCommunities] = useState<Join[]>([])
+	const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+
+	// 1. Fetch initial community from URL (if any)
 	useEffect(() => {
 	const id = searchParams.get('community')
 	setCommunityId(id)
@@ -34,6 +50,33 @@ export default function PostingPage() {
 
 	fetchCommunity()
 	}, [searchParams, supabase])
+
+	// 2. Fetch the list of communities the user has joined
+	useEffect(() => {
+		const loadCommunities = async () => {  
+			const { data: { user } } = await supabase.auth.getUser()
+			
+			if (!user) return;
+			
+			const { data, error } = await supabase
+				.from('joins')
+				.select(`
+					*,
+					communities (
+						name
+					)
+				`)
+				.eq('user_id', user.id)
+			
+			if (error) {
+				console.error('Error fetching joined communities:', error)
+			} else {
+				setJoinedCommunities(data ?? [])
+			}
+		}
+		
+		loadCommunities();
+	}, [supabase])
   
   async function post() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -68,23 +111,73 @@ export default function PostingPage() {
       >
 		<h1 className="text-2xl font-bold">Create post</h1>
 		
-		{/* This is supposed to be a Dropbox */}
-		<button className="flex p-2 rounded-full bg-white/10 hover:bg-white/20 space-x-2">
-			<div className="bg-slate-400 rounded-full w-6 h-6"></div>
-			<div>{communityName ?? <p>No community chosen</p>}</div>
-		</button>
-		
+		{/* Dropdown Container */}
+		<div className="relative inline-block z-10">
+			<button 
+				type="button" 
+				onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+				className="flex p-2 rounded-full bg-white/10 hover:bg-white/20 space-x-2 items-center"
+			>
+				{communityName ? (
+					<>
+						<div className="bg-slate-400 rounded-full w-6 h-6"></div>
+						<span className="font-medium pr-2">{communityName}</span>
+					</>
+				) : (
+					<span className="font-medium px-2">Choose a community</span>
+				)}
+				<IoIosArrowDown />
+			</button>
+
+			{/* Dropdown Menu */}
+			{isDropdownOpen && (
+				<div className="absolute top-full left-0 mt-2 w-64 max-h-60 overflow-y-auto bg-gray-900 border border-gray-700 rounded-xl shadow-xl z-20">
+					{/* "No Community" Option */}
+					<button
+						type="button"
+						onClick={() => {
+							setCommunityId(null);
+							setCommunityName(null);
+							setIsDropdownOpen(false);
+						}}
+						className="w-full text-left p-3 hover:bg-white/10 flex items-center space-x-3 transition-colors border-b border-gray-800"
+					>
+						<div className="bg-slate-600 rounded-full w-8 h-8 shrink-0 flex items-center justify-center text-xs">✕</div>
+						<span className="font-medium text-gray-300">No community (Post to profile)</span>
+					</button>
+
+					{/* Joined Communities List */}
+					{joinedCommunities.map((join, index) => (
+						<button
+							key={index}
+							type="button"
+							onClick={() => {
+								setCommunityId(join.community_id);
+								setCommunityName(join.communities.name);
+								setIsDropdownOpen(false);
+							}}
+							className="w-full text-left p-3 hover:bg-white/10 flex items-center space-x-3 transition-colors"
+						>
+							<div className="bg-slate-400 rounded-full w-8 h-8 shrink-0"></div>
+							<span className="font-medium truncate">{join.communities.name}</span>
+						</button>
+					))}
+				</div>
+			)}
+		</div>
+				
 		{/* Post Options */}
 		<div className="mt-7 space-x-5 text-white">
-			<button className="p-3 border-blue-400 border-b-4 hover:bg-white/10">Text</button>
-			<button className="p-3 hover:bg-white/10">Images & Video</button>
-			<button className="p-3 hover:bg-white/10">Link</button>
-			<button className="p-3 hover:bg-white/10">Poll</button>
+			<button type="button" className="p-3 border-blue-400 border-b-4 hover:bg-white/10">Text</button>
+			<button type="button"  className="p-3 hover:bg-white/10">Images & Video</button>
+			<button type="button"  className="p-3 hover:bg-white/10">Link</button>
+			<button type="button"  className="p-3 hover:bg-white/10">Poll</button>
 		</div>
 		
 		<input
 			placeholder="Title"
 			type="text"
+			required
 			onChange={(e) => setTitle(e.target.value)}
 			className="block p-3 border-gray-700 hover:border-gray-500 hover:bg-white/5 border-1 rounded-xl w-full max-w-2xl placeholder:text-gray-400"
 			/>
