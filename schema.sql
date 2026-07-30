@@ -15,6 +15,8 @@ create table public.communities (
   name text not null,
   description text null,
   owner_id uuid not null,
+  icon_url text null,
+  banner_url text null,
   created_at timestamp with time zone null default now(),
   constraint communities_pkey primary key (id),
   constraint communities_name_key unique (name),
@@ -28,6 +30,7 @@ create table public.posts (
   body text null,
   user_id uuid not null,
   community_id uuid null,
+  image_url text null,
   created_at timestamp with time zone null default now(),
   constraint posts_pkey primary key (id),
   constraint posts_community_id_fkey foreign KEY (community_id) references communities (id) on delete set null,
@@ -195,3 +198,119 @@ $$;
 create trigger on_auth_user_created
 after insert on auth.users
 for each row execute procedure public.handle_new_user();
+
+
+
+
+-- Storage Buckets
+
+-- Post Images
+
+-- 1. Allow anyone (logged in or logged out) to view images
+CREATE POLICY "Public Read Access"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'post_images');
+
+-- 2. Allow logged-in users to upload images
+CREATE POLICY "Authenticated Users Upload"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (bucket_id = 'post_images');
+
+-- 3. Allow users to delete their own uploaded images
+CREATE POLICY "Users Delete Own Images"
+ON storage.objects FOR DELETE
+TO authenticated
+USING (bucket_id = 'post_images' AND auth.uid() = owner);
+
+
+-- Community Assets
+
+-- Public Read (Anyone can view community icons & banners)
+CREATE POLICY "Public Read Community Assets"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'community_assets');
+
+-- INSERT / UPDATE / DELETE Policy for Owners & Moderators
+create policy "Manage Community Assets - INSERT"
+on storage.objects
+for insert
+to authenticated
+with check (
+  bucket_id = 'community_assets'
+  and (
+    (storage.foldername(name))[1]::uuid in (
+      select c.id
+      from public.communities c
+      where c.owner_id = auth.uid()
+    )
+    or
+    (storage.foldername(name))[1]::uuid in (
+      select m.community_id
+      from public.moderators m
+      where m.user_id = auth.uid()
+    )
+  )
+  and storage.filename(name) in ('icon', 'banner')
+);
+
+create policy "Manage Community Assets - UPDATE"
+on storage.objects
+for update
+to authenticated
+using (
+  bucket_id = 'community_assets'
+  and (
+    (storage.foldername(name))[1]::uuid in (
+      select c.id
+      from public.communities c
+      where c.owner_id = auth.uid()
+    )
+    or
+    (storage.foldername(name))[1]::uuid in (
+      select m.community_id
+      from public.moderators m
+      where m.user_id = auth.uid()
+    )
+  )
+  and storage.filename(name) in ('icon', 'banner')
+)
+with check (
+  bucket_id = 'community_assets'
+  and (
+    (storage.foldername(name))[1]::uuid in (
+      select c.id
+      from public.communities c
+      where c.owner_id = auth.uid()
+    )
+    or
+    (storage.foldername(name))[1]::uuid in (
+      select m.community_id
+      from public.moderators m
+      where m.user_id = auth.uid()
+    )
+  )
+  and storage.filename(name) in ('icon', 'banner')
+);
+
+create policy "Manage Community Assets - DELETE"
+on storage.objects
+for delete
+to authenticated
+using (
+  bucket_id = 'community_assets'
+  and (
+    (storage.foldername(name))[1]::uuid in (
+      select c.id
+      from public.communities c
+      where c.owner_id = auth.uid()
+    )
+    or
+    (storage.foldername(name))[1]::uuid in (
+      select m.community_id
+      from public.moderators m
+      where m.user_id = auth.uid()
+    )
+  )
+  and storage.filename(name) in ('icon', 'banner')
+);

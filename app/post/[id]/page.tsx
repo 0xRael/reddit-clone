@@ -30,7 +30,8 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 				username
 			),
 			communities (
-				name
+				name,
+				icon_id
 			),
 			post_votes_view (
 				upvotes,
@@ -115,13 +116,30 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 	
 	const deletePost = async () => {
 		const { id } = await props.params
-		
+		// 1. If the post has an image, delete it from Storage first
+		if (post?.image_url) {
+			const filePath = post.image_url.split('/post_images/')[1]
+			
+			if (filePath) {
+				const { error: storageError } = await supabase.storage
+					.from('post_images')
+					.remove([filePath])
+
+				if (storageError) {
+					console.error("Failed to delete image from storage:", storageError)
+				}
+			}
+		}
+
 		const { error } = await supabase
-			.from("posts")
+			.from('posts')
 			.delete()
 			.eq('id', id)
-		
-		if (!error) {
+
+		if (error) {
+			console.error("Failed to delete post row:", error)
+			alert("Could not delete post.")
+		} else {
 			alert("Post deleted")
 		}
 	}
@@ -213,6 +231,13 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 			
 			<h1 className="w-full block text-xl text-gray-100 font-bold">{post?.title}</h1>
 			
+			{post.image_url &&
+				<img 
+					src={post.image_url}
+					alt={post.title ?? ""}
+				/>
+			}
+
 			<p className="w-full">{post?.body}</p>
 			
 			<div className="flex space-x-2">
@@ -272,7 +297,17 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 				return (
 				<div className="ml-4 mb-8 border-l-1 border-gray-700 px-5 space-y-2" key={`${reply.id}`}>
 					<div className="flex text-sm space-x-2 relative -left-9">
-						<div className="bg-slate-400 rounded-full w-8 h-8"></div>
+						<div className="shrink-0">
+							<div className="bg-slate-400 rounded-full w-8 h-8 overflow-hidden flex items-center justify-center">
+								{post.communities?.icon_url ? (
+									<img 
+										src={post.communities?.icon_url} 
+										alt={post.communities?.name ?? "Community icon"} 
+										className="w-full h-full object-cover"
+									/>
+								) : null}
+							</div>
+						</div>
 						<div>{reply.users.username}</div>
 						<div className="text-gray-400">•</div>
 						<div className="text-gray-400">{formatDistanceToNow(new Date(reply.created_at), { addSuffix: true })}</div>
