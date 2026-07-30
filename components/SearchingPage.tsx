@@ -43,7 +43,17 @@ export default function SearchingPage() {
                                 href={`/community/${community.id}`}
                                 className="block flex px-4 py-3 hover:bg-white/5 transition border-b border-gray-900 last:border-0"
                             >
-                                <div className="bg-slate-400 rounded-full w-8 h-8 mr-2"></div>
+                                <div className="mr-2 shrink-0">
+                                    <div className="bg-slate-400 rounded-full w-8 h-8 overflow-hidden flex items-center justify-center">
+                                        {community.icon_url ? (
+                                            <img 
+                                                src={community.icon_url} 
+                                                alt={community.name ?? "Community icon"} 
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : null}
+                                    </div>
+                                </div>
                                 
                                 <div>
                                     <h2 className="text-sm font-semibold text-gray-100 line-clamp-2 leading-tight">

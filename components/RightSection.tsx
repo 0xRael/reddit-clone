@@ -28,7 +28,8 @@ const RightSection = () => {
                         username
                     ),
                     communities (
-                        name
+                        name,
+                        icon_url
                     ),
                     post_votes_view (
                         upvotes,
@@ -71,7 +72,17 @@ const RightSection = () => {
                         className="block px-4 py-3 hover:bg-white/5 transition border-b border-gray-900 last:border-0"
                     >
                         <div className="flex items-center text-[11px] text-gray-400 space-x-1 mb-2">
-                            <div className="bg-slate-400 rounded-full w-5 h-5 mr-1"></div>
+                            <div className="shrink-0 mr-1">
+                                <div className="bg-slate-400 rounded-full w-5 h-5 overflow-hidden flex items-center justify-center">
+                                    {post.communities?.icon_url ? (
+                                        <img 
+                                            src={post.communities?.icon_url} 
+                                            alt={post.communities?.name ?? "Community icon"} 
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : null}
+                                </div>
+                            </div>
                             <span className="font-bold text-gray-300">{post.communities?.name || 'unknown'}</span>
                             <span>•</span>
                             <span>{formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}</span>

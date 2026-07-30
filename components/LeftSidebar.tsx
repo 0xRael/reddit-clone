@@ -60,7 +60,8 @@ const LeftSidebar = ()=>{
 			.select(`
 				*,
 				communities (
-					name
+					name,
+					icon_url
 				)
 			`)
 			.eq('user_id', user.id)
@@ -110,14 +111,28 @@ const LeftSidebar = ()=>{
 			
 			{
 				joins.map((join)=>{
-					return (<Link className="flex relative rounded-md p-2 hover:bg-white/10" href={`/community/${join.community_id}`} key={`${join.id}`}>
-						<div className="ml-2 mr-4">
-							<div className="bg-slate-400 rounded-full w-7 h-7"></div>
+				return (
+					<Link 
+						className="flex items-center relative rounded-md p-2 hover:bg-white/10" 
+						href={`/community/${join.community_id}`} 
+						key={`${join.id}`}
+					>
+						<div className="ml-2 mr-4 shrink-0">
+							<div className="bg-slate-400 rounded-full w-7 h-7 overflow-hidden flex items-center justify-center">
+								{join.communities?.icon_url ? (
+									<img 
+										src={join.communities.icon_url} 
+										alt={join.communities.name ?? "Community icon"} 
+										className="w-full h-full object-cover"
+									/>
+								) : null}
+							</div>
 						</div>
 						<div>
 							{join.communities?.name ?? ""}
 						</div>
-					</Link>);
+						</Link>
+					);
 				})
 			}
 		</section>

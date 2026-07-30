@@ -18,6 +18,7 @@ export default function PostingPage() {
 	const [body, setBody] = useState('')
 	const [communityId, setCommunityId] = useState<string | null>(null)
 	const [communityName, setCommunityName] = useState<string | null>(null)
+	const [communityIcon, setCommunityIcon] = useState<string | null>(null)
 
 	const [imageFile, setImageFile] = useState<File | null>(null)
 	const [isUploading, setIsUploading] = useState<boolean>(false)
@@ -36,7 +37,7 @@ export default function PostingPage() {
 		if (!id) return;
 		const { data, error } = await supabase
 			.from('communities')
-			.select('name')
+			.select('name, icon_url')
 			.eq('id', id)
 			.single()
 
@@ -44,6 +45,7 @@ export default function PostingPage() {
 			console.error('Error fetching community:', error)
 		} else {
 			setCommunityName(data.name)
+			setCommunityIcon(data.icon_url)
 		}
 	}
 
@@ -62,7 +64,8 @@ export default function PostingPage() {
 				.select(`
 					*,
 					communities (
-						name
+						name,
+						icon_url
 					)
 				`)
 				.eq('user_id', user.id)
@@ -154,7 +157,17 @@ export default function PostingPage() {
 			>
 				{communityName ? (
 					<>
-						<div className="bg-slate-400 rounded-full w-6 h-6"></div>
+						<div className="shrink-0">
+							<div className="bg-slate-400 rounded-full w-6 h-6 overflow-hidden flex items-center justify-center">
+								{communityIcon ? (
+									<img 
+										src={communityIcon} 
+										alt={communityName ?? "Community icon"} 
+										className="w-full h-full object-cover"
+									/>
+								) : null}
+							</div>
+						</div>
 						<span className="font-medium pr-2">{communityName}</span>
 					</>
 				) : (
@@ -172,6 +185,7 @@ export default function PostingPage() {
 						onClick={() => {
 							setCommunityId(null);
 							setCommunityName(null);
+							setCommunityIcon(null);
 							setIsDropdownOpen(false);
 						}}
 						className="w-full text-left p-3 hover:bg-white/10 flex items-center space-x-3 transition-colors border-b border-gray-800"
@@ -188,11 +202,22 @@ export default function PostingPage() {
 							onClick={() => {
 								setCommunityId(join.community_id);
 								setCommunityName(join.communities.name);
+								setCommunityIcon(join.communities.icon_url);
 								setIsDropdownOpen(false);
 							}}
 							className="w-full text-left p-3 hover:bg-white/10 flex items-center space-x-3 transition-colors"
 						>
-							<div className="bg-slate-400 rounded-full w-8 h-8 shrink-0"></div>
+							<div className="shrink-0">
+								<div className="bg-slate-400 rounded-full w-8 h-8 overflow-hidden flex items-center justify-center">
+									{join.communities?.icon_url ? (
+										<img 
+											src={join.communities?.icon_url} 
+											alt={join.communities?.name ?? "Community icon"} 
+											className="w-full h-full object-cover"
+										/>
+									) : null}
+								</div>
+							</div>
 							<span className="font-medium truncate">{join.communities.name}</span>
 						</button>
 					))}

@@ -30,7 +30,8 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 				username
 			),
 			communities (
-				name
+				name,
+				icon_id
 			),
 			post_votes_view (
 				upvotes,
@@ -296,7 +297,17 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 				return (
 				<div className="ml-4 mb-8 border-l-1 border-gray-700 px-5 space-y-2" key={`${reply.id}`}>
 					<div className="flex text-sm space-x-2 relative -left-9">
-						<div className="bg-slate-400 rounded-full w-8 h-8"></div>
+						<div className="shrink-0">
+							<div className="bg-slate-400 rounded-full w-8 h-8 overflow-hidden flex items-center justify-center">
+								{post.communities?.icon_url ? (
+									<img 
+										src={post.communities?.icon_url} 
+										alt={post.communities?.name ?? "Community icon"} 
+										className="w-full h-full object-cover"
+									/>
+								) : null}
+							</div>
+						</div>
 						<div>{reply.users.username}</div>
 						<div className="text-gray-400">•</div>
 						<div className="text-gray-400">{formatDistanceToNow(new Date(reply.created_at), { addSuffix: true })}</div>
