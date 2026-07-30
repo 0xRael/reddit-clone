@@ -123,25 +123,36 @@ export default function PostingPage() {
 			{/* Dropdown Menu */}
 			{isDropdownOpen && (
 				<div className="absolute top-full left-0 mt-2 w-64 max-h-60 overflow-y-auto bg-gray-900 border border-gray-700 rounded-xl shadow-xl z-20">
-					{joinedCommunities.length === 0 ? (
-						<div className="p-4 text-sm text-gray-400">You haven't joined any communities yet.</div>
-					) : (
-						joinedCommunities.map((join, index) => (
-							<button
-								key={index}
-								type="button"
-								onClick={() => {
-									setCommunityId(join.community_id);
-									setCommunityName(join.communities.name);
-									setIsDropdownOpen(false); // Close dropdown after selection
-								}}
-								className="w-full text-left p-3 hover:bg-white/10 flex items-center space-x-3 transition-colors"
-							>
-								<div className="bg-slate-400 rounded-full w-8 h-8 shrink-0"></div>
-								<span className="font-medium truncate">{join.communities.name}</span>
-							</button>
-						))
-					)}
+					{/* "No Community" Option */}
+					<button
+						type="button"
+						onClick={() => {
+							setCommunityId(null);
+							setCommunityName(null);
+							setIsDropdownOpen(false);
+						}}
+						className="w-full text-left p-3 hover:bg-white/10 flex items-center space-x-3 transition-colors border-b border-gray-800"
+					>
+						<div className="bg-slate-600 rounded-full w-8 h-8 shrink-0 flex items-center justify-center text-xs">✕</div>
+						<span className="font-medium text-gray-300">No community (Post to profile)</span>
+					</button>
+
+					{/* Joined Communities List */}
+					{joinedCommunities.map((join, index) => (
+						<button
+							key={index}
+							type="button"
+							onClick={() => {
+								setCommunityId(join.community_id);
+								setCommunityName(join.communities.name);
+								setIsDropdownOpen(false);
+							}}
+							className="w-full text-left p-3 hover:bg-white/10 flex items-center space-x-3 transition-colors"
+						>
+							<div className="bg-slate-400 rounded-full w-8 h-8 shrink-0"></div>
+							<span className="font-medium truncate">{join.communities.name}</span>
+						</button>
+					))}
 				</div>
 			)}
 		</div>
