@@ -4,6 +4,15 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/component'
 import { IoIosArrowDown } from "react-icons/io";
 
+type Join = {
+  id: string
+  user_id: string
+  community_id: string
+  communities: {
+    name: string
+  }
+}
+
 export default function PostingPage() {
 	const searchParams = useSearchParams()
 	const router = useRouter()
@@ -16,7 +25,7 @@ export default function PostingPage() {
 	const [communityName, setCommunityName] = useState<string | null>(null)
   
 	// Dropdown states
-	const [joinedCommunities, setJoinedCommunities] = useState<any[]>([])
+	const [joinedCommunities, setJoinedCommunities] = useState<Join[]>([])
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
 	// 1. Fetch initial community from URL (if any)
