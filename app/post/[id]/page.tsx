@@ -31,7 +31,7 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 			),
 			communities (
 				name,
-				icon_id
+				icon_url
 			),
 			post_votes_view (
 				upvotes,
