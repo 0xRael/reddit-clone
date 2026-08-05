@@ -195,8 +195,20 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 	{ post ? <><div className="w-full max-w-3xl">
 		<div className="space-y-2 py-3">
 			<div className="flex text-sm space-x-2">
-				<div className="bg-slate-400 rounded-full w-8 h-8"></div>
-				<div className="mx-2">{post?.users.username}</div>
+				<div className="shrink-0">
+					<div className="bg-slate-400 rounded-full w-8 h-8 overflow-hidden flex items-center justify-center">
+						{post.communities?.icon_url ? (
+							<img 
+								src={post.communities?.icon_url} 
+								alt={post.communities?.name ?? "Community icon"} 
+								className="w-full h-full object-cover"
+							/>
+						) : null}
+					</div>
+				</div>
+				<a href={`/user/${post?.user_id}`} className="mx-2">
+					{post?.users.username}
+				</a>
 				<div className="text-gray-400">•</div>
 				<div className="text-gray-400">{formatDistanceToNow(new Date(post?.created_at), { addSuffix: true })}</div>
 				{/* Options button */}
@@ -297,18 +309,10 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 				return (
 				<div className="ml-4 mb-8 border-l-1 border-gray-700 px-5 space-y-2" key={`${reply.id}`}>
 					<div className="flex text-sm space-x-2 relative -left-9">
-						<div className="shrink-0">
-							<div className="bg-slate-400 rounded-full w-8 h-8 overflow-hidden flex items-center justify-center">
-								{post.communities?.icon_url ? (
-									<img 
-										src={post.communities?.icon_url} 
-										alt={post.communities?.name ?? "Community icon"} 
-										className="w-full h-full object-cover"
-									/>
-								) : null}
-							</div>
-						</div>
-						<div>{reply.users.username}</div>
+						<div className="bg-slate-400 rounded-full w-8 h-8"></div>
+						<a href={`/user/${reply.user_id}`} className="mx-2">
+							{reply.users.username}
+						</a>
 						<div className="text-gray-400">•</div>
 						<div className="text-gray-400">{formatDistanceToNow(new Date(reply.created_at), { addSuffix: true })}</div>
 					</div>

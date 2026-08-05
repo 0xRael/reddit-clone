@@ -170,7 +170,20 @@ const Navbar = () => {
 
             {menuOpen && (
               <div className="absolute right-0 z-20 mt-2 w-44 overflow-hidden rounded-xl border border-white/10 bg-slate-900/95 shadow-xl backdrop-blur-xl">
-                <Link
+				<Link
+                  href={`/user/${userId}`}
+                  className="flex px-4 py-2 text-sm text-white hover:bg-white/10"
+                  onClick={() => setMenuOpen(false)}
+                >
+            		<div className="ml-1 mr-2">
+						
+          				<div className="bg-slate-400 rounded-full my-1 w-5 h-5"></div>
+					</div>
+					<div>
+						View Profile
+					</div>
+                </Link>
+				<Link
                   href="/settings"
                   className="flex px-4 py-2 text-sm text-white hover:bg-white/10"
                   onClick={() => setMenuOpen(false)}

@@ -12,10 +12,11 @@ import { Post } from "@/types"
 
 type Props = {
 	communityId?: string | null;
+	userId?: string | null;
 	searchQuery?: string | null;
 }
 
-const PostsList = ({ communityId, searchQuery }: Props)=>{
+const PostsList = ({ communityId, userId, searchQuery }: Props)=>{
 	const supabase = createClient()
 	const [posts, setPosts] = useState<Post[]>([])
 	
@@ -46,6 +47,10 @@ const PostsList = ({ communityId, searchQuery }: Props)=>{
                 query = query.eq("community_id", communityId);
             }
             
+            if (userId) {
+                query = query.eq("user_id", userId);
+            }
+            
             if (searchQuery) {
                 // ilike is case-insensitive. The % signs act as wildcards.
                 query = query.or(`title.ilike.%${searchQuery}%,body.ilike.%${searchQuery}%`);
@@ -61,7 +66,7 @@ const PostsList = ({ communityId, searchQuery }: Props)=>{
         }
         
         fetchPosts();
-    }, [supabase, communityId, searchQuery])
+    }, [supabase, communityId, userId, searchQuery])
 	
 	const votePost = async (postId: string, voteType: number) => {
 		const { data: { user } } = await supabase.auth.getUser()
@@ -112,7 +117,7 @@ const PostsList = ({ communityId, searchQuery }: Props)=>{
 								) : null}
 							</div>
 						</div>
-						<div className="mx-2">{post.users.username}</div>
+						<div className="mx-2">{(!communityId && post.communities?.name) || post.users.username}</div>
 						<div className="text-gray-400">•</div>
 						<div className="text-gray-400">{formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}</div>
 						<div className="ml-auto p-2 rounded-full hover:bg-white/10"><SlOptions /></div>

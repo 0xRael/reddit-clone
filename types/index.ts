@@ -14,6 +14,7 @@ export type Post = {
   body: string | null
   community_id: string | null
   created_at: string
+  user_id: string
   image_url: string | null
   users: {
     username: string
@@ -64,4 +65,10 @@ export type Join = {
     name: string,
     icon_url: string | null
   }
+}
+
+export type User = {
+  id: string
+  username: string
+  created_at: string
 }
