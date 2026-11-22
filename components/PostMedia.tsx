@@ -2,7 +2,7 @@ import Link from "next/link";
 
 interface PostMediaProps {
   href: string;
-  src?: string | null;
+  src?: string;
   alt?: string;
   fallbackText?: string;
   className?: string;
