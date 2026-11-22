@@ -138,7 +138,7 @@ export default function PostingPage() {
 }
   
   return (
-    <div className="w-full h-full min-h-screen flex items-center justify-center">
+    <div className="w-full h-full pt-5 flex items-center justify-center">
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -178,7 +178,7 @@ export default function PostingPage() {
 
 			{/* Dropdown Menu */}
 			{isDropdownOpen && (
-				<div className="absolute top-full left-0 mt-2 w-64 max-h-60 overflow-y-auto bg-gray-900 border border-gray-700 rounded-xl shadow-xl z-20">
+				<div className="absolute top-full left-0 mt-2 w-64 max-h-60 overflow-y-auto bg-background border border-gray-700 rounded-xl shadow-xl z-20">
 					{/* "No Community" Option */}
 					<button
 						type="button"
@@ -295,7 +295,7 @@ export default function PostingPage() {
 		<textarea
 			placeholder="Body Text"
 			onChange={(e) => setBody(e.target.value)}
-			className="block p-3 border-gray-700 hover:border-gray-500 hover:bg-white/5 border-1 rounded-xl w-full max-w-2xl placeholder:text-gray-400"
+			className="block p-3 border-gray-700 min-h-30 hover:border-gray-500 hover:bg-white/5 border-1 rounded-xl w-full max-w-2xl placeholder:text-gray-400"
 			/>
 		
 		<div className="flex">

@@ -11,6 +11,7 @@ import { useRecentPosts } from "@/hooks/useRecentPosts";
 
 import { Post, Reply } from '@/types'
 import { PostMedia } from "@/components/PostMedia"
+import { ReplyItem } from "@/components/ReplyItem";
 
 export default function PostPage(props: { params: Promise<{ id: string }> }) {
 	const supabase = createClient()
@@ -19,6 +20,9 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 	const [comment, setComment] = useState('')
 	const [showDropdown, setShowDropdown] = useState(false)
 	const { addPostId } = useRecentPosts(); // To register into recent posts
+
+  const [userPostVote, setUserPostVote] = useState<number | null>(null)
+	const [userReplyVotes, setUserReplyVotes] = useState<Record<string, number>>({})
 	
 	const loadPost = async () => {
 		const { id } = await props.params
@@ -54,61 +58,79 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 			*,
 			users (
 				username
-			)
+			),
+      reply_votes_view (
+        upvotes,
+        downvotes 
+      )
 		`)
 		.eq('post_id', id)
-		
-		setReplies(fetched_replies ?? [])
+
+const replyList = fetched_replies ?? [];
+		setReplies(replyList);
+
+		// Load current user's existing votes so active buttons stay highlighted
+		const { data: { user } } = await supabase.auth.getUser()
+		if (!user) {
+			setUserPostVote(null)
+			setUserReplyVotes({})
+			return
+		}
+
+		const { data: existingPostVote } = await supabase
+			.from("vote")
+			.select("type")
+			.eq("user_id", user.id)
+			.eq("post_id", id)
+			.maybeSingle()
+
+		setUserPostVote(existingPostVote?.type ?? null)
+
+		if (replyList.length > 0) {
+			const replyIds = replyList.map((r) => r.id)
+			const { data: existingReplyVotes } = await supabase
+				.from("vote")
+				.select("reply_id, type")
+				.eq("user_id", user.id)
+				.in("reply_id", replyIds)
+
+			const replyVoteMap: Record<string, number> = {}
+			for (const row of existingReplyVotes ?? []) {
+				if (row.reply_id) {
+					replyVoteMap[row.reply_id] = row.type
+				}
+			}
+			setUserReplyVotes(replyVoteMap)
+		} else {
+			setUserReplyVotes({})
+		}
     }
 	
 	useEffect(() => {
 		loadPost()
 	}, [supabase])
 	
-	async function postComment() {
-		const { data: { user } } = await supabase.auth.getUser()
-		if (!user) {
-			return
-		}
-
-		if (!post) {
-			return
-		}
-
-		const { data, error } = await supabase
-			.from("replies")
-			.insert({
-				text: comment,
-				user_id: user.id,
-				post_id: post?.id ?? "",
-			})
-			
-		if (error) {
-			console.error("An error ocurred when commenting:", error);
-		} else {
-			alert("Comment Success!");
-			loadPost();
-		}
-	}
-	
 	const votePost = async (voteType: number) => {
 		const { data: { user } } = await supabase.auth.getUser()
 		
-		if (!user) {
+		if (!user || !post) {
 			return
 		}
-		
-		if (!post) {
-			return
-		}
-	  
-		const { data, error } = await supabase
-			.from("vote")
-			.insert({
-				user_id: user.id,
-				post_id: post?.id ?? "",
-				type: voteType
-			})
+
+    const { error } = await supabase
+    .from("vote")
+    .upsert(
+      {
+        user_id: user.id,
+        post_id: post.id,
+        type: voteType,
+      },
+      {
+        onConflict: "user_id,post_id",
+      }
+    );
+
+    setUserPostVote(voteType);
 		
 		if (error) {
 			console.error("Error voting:", error)
@@ -148,23 +170,78 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 	const voteReply = async (replyId: string, voteType: number) => {
 		const { data: { user } } = await supabase.auth.getUser()
 		
-		if (!user) {
+		if (!user || !replyId) {
 			return
 		}
 	  
-		const { data, error } = await supabase
-			.from("vote")
-			.insert({
-				user_id: user.id,
-				reply_id: replyId,
-				type: voteType
-			})
+    const { error } = await supabase
+    .from("vote")
+    .upsert(
+      {
+        user_id: user.id,
+        reply_id: replyId,
+        type: voteType,
+      },
+      {
+        onConflict: "user_id,reply_id",
+      }
+    ); 
+
+    setUserReplyVotes((prev) => ({
+			...prev,
+			[replyId]: voteType,
+		}))
 		
 		if (error) {
 			console.error("Error voting:", error)
 		}
 	}
 	
+  function buildReplyTree(flatReplies: Reply[]): Reply[] {
+  const map = new Map<string, Reply>();
+  const roots: Reply[] = [];
+
+  for (const r of flatReplies) {
+    map.set(r.id, { ...r, children: [] });
+  }
+
+  for (const r of flatReplies) {
+    const node = map.get(r.id)!;
+    if (r.reply_id && map.has(r.reply_id)) {
+      map.get(r.reply_id)!.children!.push(node);
+    } else {
+      roots.push(node);
+    }
+  }
+
+  return roots;
+}
+
+async function postComment(textToPost = comment, parentReplyId: string | null = null) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user || !post || !textToPost.trim()) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from("replies")
+    .insert({
+      text: textToPost.trim(),
+      user_id: user.id,
+      post_id: post.id,
+      reply_id: parentReplyId,
+    });
+
+  if (error) {
+    console.error("An error occurred when commenting:", error);
+  } else {
+    if (!parentReplyId) {
+      setComment("");
+    }
+    loadPost();
+  }
+}
+
 	function copyLink(postId: string) {
 	  const url = `${window.location.origin}/post/${postId}`
 	  navigator.clipboard.writeText(url)
@@ -195,7 +272,7 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
   <div className="w-full h-full justify-center flex relative">
 	{ post ? <><div className="w-full max-w-3xl">
 		<div className="space-y-2 py-3">
-			<div className="flex text-sm space-x-2">
+			<div className="flex text-sm items-center space-x-2">
 				<div className="shrink-0">
 					<div className="bg-slate-400 rounded-full w-8 h-8 overflow-hidden flex items-center justify-center">
 						{post.communities?.icon_url ? (
@@ -207,7 +284,7 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 						) : null}
 					</div>
 				</div>
-				<a href={`/user/${post?.user_id}`} className="mx-2">
+				<a href={`/user/${post?.user_id}`} className="mr-2 hover:underline">
 					{post?.users.username}
 				</a>
 				<div className="text-gray-400">•</div>
@@ -222,17 +299,17 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
                   </button>
 
                   {showDropdown && (
-                    <div className="absolute right-0 mt-2 w-32 bg-gray-800 border border-gray-700 rounded shadow-lg z-10">
+                    <div className="absolute right-0 mt-2 w-32 bg-background border border-gray-700 rounded shadow-lg z-10">
 						<button
 						onClick={() => copyText(post.body ?? "")}
-						className="block flex w-full text-left p-4 text-sm hover:bg-gray-700"
+						className="block flex w-full text-left p-4 text-sm hover:bg-white/5"
 						>
 							<FiCopy size={20} className="mr-2" />
 							Copy Text
 						</button>
 						<button
 						onClick={deletePost}
-						className="block flex w-full text-left p-4 text-sm text-red-400 hover:bg-gray-700"
+						className="block flex w-full text-left p-4 text-sm text-red-400 hover:bg-white/5"
 						>
 							<FiTrash size={20} className="mr-2" />
 							Delete
@@ -257,7 +334,7 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 			<div className="flex space-x-2">
 				<div className="flex p-2 rounded-full bg-white/10">
 					<button onClick={(e) => {votePost(1)}}>
-						<FaRegThumbsUp className="rounded-full hover:bg-white/10 hover:text-orange-700"/>
+						<FaRegThumbsUp className={`rounded-full hover:bg-white/10 hover:text-orange-400 ${userPostVote === 1 && "text-orange-400"}`}/>
 					</button>
 					
 					<p className="mx-2 text-sm">
@@ -268,7 +345,7 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 
 					
 					<button onClick={(e) => {votePost(-1)}}>
-						<FaRegThumbsDown className="rounded-full hover:bg-white/10 hover:text-blue-700"/>
+						<FaRegThumbsDown className={`rounded-full hover:bg-white/10 hover:text-blue-400 ${userPostVote === -1 && "text-blue-400"}`}/>
 					</button>
 				</div>
 				
@@ -301,56 +378,15 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 			</button>
 		</form>
 		
-		{
-			/* Comments */
-			replies.map((reply)=>{
-				return (
-				<div className="ml-4 mb-8 border-l-1 border-gray-700 px-5 space-y-2" key={`${reply.id}`}>
-					<div className="flex text-sm space-x-2 relative -left-9">
-						<div className="bg-slate-400 rounded-full w-8 h-8"></div>
-						<a href={`/user/${reply.user_id}`} className="mx-2">
-							{reply.users.username}
-						</a>
-						<div className="text-gray-400">•</div>
-						<div className="text-gray-400">{formatDistanceToNow(new Date(reply.created_at), { addSuffix: true })}</div>
-					</div>
-					
-					<p className="w-full">{reply.text}</p>
-					
-					<div className="flex space-x-2 text-gray-300">
-						<div className="flex p-2">
-							<button onClick={(e) => voteReply(reply.id, 1)}>
-								<FaRegThumbsUp className="rounded-full hover:bg-white/10 hover:text-orange-700"/>
-							</button>
-							
-							<p className="mx-2 text-sm">
-							{/*{post.post_votes_view?.length
-								? post.post_votes_view[0].upvotes - post.post_votes_view[0].downvotes
-							: 0}*/}00
-							</p>
-
-							
-							<button onClick={(e) => voteReply(reply.id, -1)}>
-								<FaRegThumbsDown className="rounded-full hover:bg-white/10 hover:text-blue-700"/>
-							</button>
-						</div>
-						
-						<div className="flex p-2 rounded-full hover:bg-white/10">
-							<FiMessageCircle/>
-							<p className="mx-2 text-sm">Reply</p>
-						</div>
-						
-						<div className="flex p-2 rounded-full hover:bg-white/10">
-							<FaShare/>
-							<p className="mx-2 text-sm">Share</p>
-						</div>
-						
-						<div className="p-2 rounded-full hover:bg-white/10"><SlOptions /></div>
-					</div>
-				</div>
-				);
-			})
-		}
+		{buildReplyTree(replies).map((rootReply) => (
+      <ReplyItem
+        key={rootReply.id}
+        reply={rootReply}
+        userReplyVotes={userReplyVotes}
+        onVoteReply={voteReply}
+        onSubmitReply={(text, parentReplyId) => postComment(text, parentReplyId)}
+      />
+    ))}
 		
 	</div>
 	{post.community_id ? 

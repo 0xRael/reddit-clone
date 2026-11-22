@@ -80,7 +80,7 @@ const LeftSidebar = ()=>{
 		>
 		  {isOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
 		</button>
-		<section className={`xl:sticky ${isOpen ? 'max-xl:fixed max-xl:bg-black/70 max-xl:backdrop-blur-md max-lg:-ml-4 max-lg:pl-4 max-xl:z-2' : 'max-xl:hidden'} top-14 w-80 h-[calc(100vh-3.5rem)] overflow-y-hidden hover:overflow-y-scroll overflow-x-hidden overscroll-contain border-r-1 border-gray-600 p-5`}>			
+		<section className={`xl:sticky transition-transform duration-400 max-xl:fixed bg-background max-lg:-ml-4 max-lg:pl-4 max-xl:z-2 ${isOpen ? '' : 'max-xl:-translate-x-80  '} top-14 w-80 h-[calc(100vh-3.5rem)] overflow-y-hidden hover:overflow-y-scroll overflow-x-hidden overscroll-contain border-r-1 border-gray-600 p-5`}>			
 			{
 				/* Main Navigation */
 				SIDEBAR_ITEMS.map((item)=>{

@@ -36,7 +36,9 @@ export type Reply = {
 	created_at: string,
 	users: {
 		username: string
-	}
+	},
+  reply_votes_view: {upvotes: number,downvotes: number}[],
+  children?: Reply[]
 }
 
 export type Notification = {

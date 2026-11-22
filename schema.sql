@@ -141,7 +141,52 @@ create table public.notifications (
 -- VIEWS
 
 
+create view public.post_replies_view
+with
+  (security_invoker = on) as
+select
+  post_id,
+  count(*) as count
+from
+  replies
+group by
+  post_id;
 
+create view public.post_votes_view
+with
+  (security_invoker = on) as
+select
+  post_id,
+  count(*) filter (
+    where
+      type = 1
+  ) as upvotes,
+  count(*) filter (
+    where
+      type = '-1'::integer
+  ) as downvotes
+from
+  vote
+group by
+  post_id;
+
+create view public.reply_votes_view
+with
+  (security_invoker = on) as
+select
+  reply_id,
+  count(*) filter (
+    where
+      type = 1
+  ) as upvotes,
+  count(*) filter (
+    where
+      type = '-1'::integer
+  ) as downvotes
+from
+  vote
+group by
+  reply_id;
 
 
 

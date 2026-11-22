@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { FaRegThumbsUp, FaRegThumbsDown, FaShare } from "react-icons/fa6";
 import { FiMessageCircle } from "react-icons/fi";
-import { SlOptions } from "react-icons/sl";
 import { createClient } from "@/utils/supabase/component"
 import { useEffect, useState } from "react"
 import { formatDistanceToNow } from 'date-fns';
@@ -105,10 +104,10 @@ const PostsList = ({ communityId, userId, searchQuery }: Props)=>{
 		{ posts.map((post)=>{
 			return (
 			<div className="border-t-1 border-gray-700" key={`${post.id}`}>
-				<div className="p-3 space-y-2 rounded-xl hover:bg-white/10">
-					<div className="flex text-sm space-x-2">
+				<div className="p-3 space-y-2 rounded-xl hover:bg-white/5">
+					<div className="flex text-sm space-x-2 items-center">
 						<div className="shrink-0">
-							<div className="bg-slate-400 rounded-full w-5 h-5 overflow-hidden flex items-center justify-center">
+							<div className="bg-slate-400 rounded-full w-8 h-8 overflow-hidden flex items-center justify-center">
 								{post.communities?.icon_url ? (
 									<img 
 										src={post.communities?.icon_url} 
@@ -118,10 +117,11 @@ const PostsList = ({ communityId, userId, searchQuery }: Props)=>{
 								) : null}
 							</div>
 						</div>
-						<div className="mx-2">{(!communityId && post.communities?.name) || post.users.username}</div>
+						<div className="mr-2">
+              {(!communityId && post.communities?.name) || post.users.username}
+            </div>
 						<div className="text-gray-400">•</div>
 						<div className="text-gray-400">{formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}</div>
-						<div className="ml-auto p-2 rounded-full hover:bg-white/10"><SlOptions /></div>
 					</div>
 					
 					<Link href={`/post/${post.id}`} className="w-full block text-lg text-gray-100 font-bold">{post.title}</Link>
@@ -140,7 +140,7 @@ const PostsList = ({ communityId, userId, searchQuery }: Props)=>{
 					<div className="flex space-x-2">
 						<div className="flex p-2 rounded-full bg-white/10">
 							<button onClick={(e) => votePost(post.id, 1)}>
-								<FaRegThumbsUp className="rounded-full hover:bg-white/10 hover:text-orange-700"/>
+								<FaRegThumbsUp className="rounded-full hover:bg-white/10 hover:text-orange-400"/>
 							</button>
 							
 							<p className="mx-2 text-sm">
@@ -151,7 +151,7 @@ const PostsList = ({ communityId, userId, searchQuery }: Props)=>{
 
 							
 							<button onClick={(e) => votePost(post.id, -1)}>
-								<FaRegThumbsDown className="rounded-full hover:bg-white/10 hover:text-blue-700"/>
+								<FaRegThumbsDown className="rounded-full hover:bg-white/10 hover:text-blue-400"/>
 							</button>
 						</div>
 						

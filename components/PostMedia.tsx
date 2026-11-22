@@ -17,7 +17,7 @@ export function PostMedia({
   return (
     <Link
       href={href}
-      className={`relative w-full max-h-130 flex border-1 border-gray-800 overflow-hidden rounded-xl justify-center ${className}`}
+      className={`relative w-full max-h-130 flex border-1 border-gray-700 hover:border-gray-500 overflow-hidden rounded-xl justify-center ${className}`}
     >
       <div
         aria-hidden="true"

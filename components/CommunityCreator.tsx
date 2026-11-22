@@ -41,7 +41,7 @@ export default function CommunityCreator({ open, onClose }: Props) {
 	
 	return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-	  <div className="bg-neutral-900 text-white rounded-xl w-full max-w-lg p-6 shadow-lg relative">
+	  <div className="bg-background text-white rounded-xl w-full max-w-lg p-6 shadow-lg relative">
 		{/* Close button */}
 		<button
 		  onClick={onClose}
@@ -61,7 +61,7 @@ export default function CommunityCreator({ open, onClose }: Props) {
 			type="text"
 			value={name}
 			onChange={(e) => setName(e.target.value)}
-			className="mt-1 w-full rounded bg-neutral-800 border border-neutral-700 p-2"
+			className="mt-1 w-full p-3 rounded-xl hover:bg-white/5 border border-gray-700 hover:border-gray-500 placeholder:text-gray-400"
 			placeholder="Community"
 		  />
 		</label>
@@ -71,7 +71,7 @@ export default function CommunityCreator({ open, onClose }: Props) {
 		  <textarea
 			value={description}
 			onChange={(e) => setDescription(e.target.value)}
-			className="mt-1 w-full rounded bg-neutral-800 border border-neutral-700 p-2"
+			className="mt-1 w-full p-3 rounded-xl min-h-30 hover:bg-white/5 border border-gray-700 hover:border-gray-500 placeholder:text-gray-400"
 			placeholder="Your community description"
 		  />
 		</label>
