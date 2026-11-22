@@ -7,6 +7,7 @@ import { LuCakeSlice } from "react-icons/lu";
 import { format } from 'date-fns'
 
 import { Community } from '@/types'
+import { MarkdownContent } from '@/components/MarkdownContent'
 
 type Props = {
 	communityId: string;
@@ -41,7 +42,7 @@ const CommunityInfo = ({ communityId }: Props) => {
 				<div className="bg-black text-gray-400 rounded-xl w-full p-5 space-y-2">
 					<Link href={`/community/${communityId}`} className="text-sm text-gray-500 mb-3">{community.name}</Link>
 					
-					<p>{community.description}</p>
+					<MarkdownContent className="w-full" content={community.description} />
 					
 					<div className="flex space-x-2">
 						<LuCakeSlice />

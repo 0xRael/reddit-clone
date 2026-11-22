@@ -6,6 +6,7 @@ import { FaRegThumbsUp, FaRegThumbsDown, FaShare } from "react-icons/fa6";
 import { FiMessageCircle } from "react-icons/fi";
 import { SlOptions } from "react-icons/sl";
 import { Reply } from "@/types";
+import { MarkdownContent } from "@/components/MarkdownContent"
 
 interface ReplyItemProps {
   reply: Reply;
@@ -83,9 +84,7 @@ export function ReplyItem({
           </div>
 
           {/* Body */}
-          <p className="w-full whitespace-pre-wrap text-sm text-gray-100">
-            {reply.text}
-          </p>
+          <MarkdownContent content={reply.text} className="w-full text-base" />
 
           {/* Actions */}
           <div className="flex items-center space-x-1 text-gray-300 text-sm pt-0.5">

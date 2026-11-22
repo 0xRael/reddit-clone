@@ -132,7 +132,7 @@ const PostsList = ({ communityId, userId, searchQuery }: Props)=>{
               src={post.image_url}
               alt={post.title ?? ""}
             /> :
-						<Link href={`/post/${post.id}`} className="w-full max-h-60 flex overflow-hidden">
+						<Link href={`/post/${post.id}`} className="w-full max-h-40 flex overflow-hidden">
               <p className="whitespace-pre-wrap">{post.body}</p>
             </Link>
 					}

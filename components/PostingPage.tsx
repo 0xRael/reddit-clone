@@ -6,6 +6,8 @@ import { IoIosArrowDown } from "react-icons/io";
 
 import { Join } from '@/types'
 
+import { resolveMentionsToTokens } from "@/utils/mentions";
+
 const MAX_FILE_SIZE = 3 * 1024 * 1024 // 3MB in bytes
 
 export default function PostingPage() {
@@ -118,12 +120,14 @@ export default function PostingPage() {
         imageUrl = data.publicUrl
     }
     
+    const formattedText = await resolveMentionsToTokens(body);
+
     // Save the post to the database (now including the imageUrl)
     const { error } = await supabase
         .from("posts")
         .insert({
             title: title,
-            body: body,
+            body: formattedText,
             user_id: user.id,
             community_id: communityId,
             image_url: imageUrl 

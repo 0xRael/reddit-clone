@@ -3,6 +3,8 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { createClient } from '@/utils/supabase/component'
 
+import { resolveMentionsToTokens } from "@/utils/mentions";
+
 type Props = {
   open: boolean
   onClose: () => void
@@ -19,12 +21,14 @@ export default function CommunityCreator({ open, onClose }: Props) {
 		if (!user) {
 			return
 		}
-		
+  
+    const formattedText = await resolveMentionsToTokens(description);		
+
 		const { data, error } = await supabase
 			.from("communities")
 			.insert({
 				name: name,
-				description: description,
+				description: formattedText,
 				owner_id: user.id
 			})
 			.select('id') 

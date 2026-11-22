@@ -12,6 +12,9 @@ import { useRecentPosts } from "@/hooks/useRecentPosts";
 import { Post, Reply } from '@/types'
 import { PostMedia } from "@/components/PostMedia"
 import { ReplyItem } from "@/components/ReplyItem";
+import { MarkdownContent } from "@/components/MarkdownContent"
+
+import { resolveMentionsToTokens } from "@/utils/mentions";
 
 export default function PostPage(props: { params: Promise<{ id: string }> }) {
 	const supabase = createClient()
@@ -222,11 +225,12 @@ async function postComment(textToPost = comment, parentReplyId: string | null = 
   if (!user || !post || !textToPost.trim()) {
     return;
   }
+  const formattedText = await resolveMentionsToTokens(textToPost);
 
   const { error } = await supabase
     .from("replies")
     .insert({
-      text: textToPost.trim(),
+      text: formattedText,
       user_id: user.id,
       post_id: post.id,
       reply_id: parentReplyId,
@@ -328,8 +332,8 @@ async function postComment(textToPost = comment, parentReplyId: string | null = 
           alt={post.title ?? ""}
         />
 			}
-
-			<p className="w-full whitespace-pre-wrap">{post?.body}</p>
+ 
+			<MarkdownContent content={post?.body} className="w-full text-base" />
 			
 			<div className="flex space-x-2">
 				<div className="flex p-2 rounded-full bg-white/10">
