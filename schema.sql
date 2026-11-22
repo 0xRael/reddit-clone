@@ -203,22 +203,113 @@ returns trigger
 language plpgsql
 security definer
 as $$
+declare
+  v_recipient_id uuid;
 begin
+  if new.reply_id is not null then
+    -- Nested reply: notify the author of the reply being replied to
+    select user_id
+      into v_recipient_id
+    from replies
+    where id = new.reply_id;
+  else
+    -- Top-level reply: notify the author of the post
+    select user_id
+      into v_recipient_id
+    from posts
+    where id = new.post_id;
+  end if;
+
+  -- Skip if no recipient was found or the actor is replying to themselves
+  if v_recipient_id is null or v_recipient_id = new.user_id then
+    return new;
+  end if;
+
   insert into notifications (user_id, actor_id, type, post_id, reply_id)
   values (
-    (select user_id from posts where id = new.post_id), -- recipient
-    new.user_id,                                        -- actor
+    v_recipient_id, -- recipient (parent reply author or post author)
+    new.user_id,    -- actor
     'reply',
-    new.post_id,                                        -- post involved
-    new.id                                              -- reply involved
+    new.post_id,    -- post involved
+    new.id          -- reply involved
   );
+
   return new;
 end;
 $$;
 
+drop trigger if exists reply_notify on replies;
 create trigger reply_notify
-after INSERT on replies for EACH row
-execute FUNCTION notify_on_reply ();
+after insert on replies
+for each row
+execute function notify_on_reply();
+
+create or replace function public.create_mention_notifications()
+returns trigger
+language plpgsql
+security definer
+as $$
+declare
+  v_source_text text;
+  v_actor_id uuid;
+  v_mentioned_id uuid;
+begin
+  -- Adapt column names to match your `posts` and `replies` tables
+  if tg_table_name = 'posts' then
+    v_source_text := new.body;
+    v_actor_id := new.user_id;
+  elsif tg_table_name = 'replies' then
+    v_source_text := new.text;
+    v_actor_id := new.user_id;
+  else
+    return new;
+  end if;
+
+  if v_source_text is null then
+    return new;
+  end if;
+
+  for v_mentioned_id in
+    select distinct (m[1])::uuid
+    from regexp_matches(
+      v_source_text,
+      '@\[user:([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\]',
+      'g'
+    ) as m
+  loop
+    -- Don't notify yourself, and ignore non-existent user IDs
+    if v_mentioned_id <> v_actor_id
+       and exists (select 1 from public.users where id = v_mentioned_id) then
+      insert into public.notifications (
+        user_id,        -- recipient
+        actor_id,       -- who did the mention (adjust to your column names)
+        type,
+        post_id,
+        reply_id
+      )
+      values (
+        v_mentioned_id,
+        v_actor_id,
+        'mention',
+        case when tg_table_name = 'posts' then new.id else new.post_id end,
+        case when tg_table_name = 'replies' then new.id else null end
+      );
+    end if;
+  end loop;
+
+  return new;
+end;
+$$;
+
+create trigger trg_posts_mention_notifications
+after insert on public.posts
+for each row
+execute function public.create_mention_notifications();
+
+create trigger trg_replies_mention_notifications
+after insert on public.replies
+for each row
+execute function public.create_mention_notifications();
 
 -- Function to create a user row when a new auth user is created
 create or replace function public.handle_new_user()

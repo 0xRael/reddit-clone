@@ -78,6 +78,7 @@ export default function NotificationsPage() {
 				<div className="text-gray-300">
 				  <span className="font-bold">{n.actor?.username ?? "Someone"}</span>{" "}
 				  {n.type === "reply" && "replied to your post."}
+				  {n.type === "mention" && "mentioned you in a post/reply."}
 				  {n.type === "upvote" && "upvoted your post."}
 				  {/* add more types as needed */}
 				</div>

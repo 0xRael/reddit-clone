@@ -222,7 +222,7 @@ const replyList = fetched_replies ?? [];
 
 async function postComment(textToPost = comment, parentReplyId: string | null = null) {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !post || !textToPost.trim()) {
+  if (!user || !post || !textToPost) {
     return;
   }
   const formattedText = await resolveMentionsToTokens(textToPost);
@@ -366,21 +366,24 @@ async function postComment(textToPost = comment, parentReplyId: string | null = 
 				</button>
 			</div>
 		</div>
-		
-		<form className="relative w-full mb-12"
-		  onSubmit={(e) => {
-          e.preventDefault()
-		  postComment()
-        }}>
-			<input
-			  placeholder="Join the conversation"
-			  onChange={(e) => setComment(e.target.value)}
-			  className="hover:bg-white/10 w-full border-gray-600 hover:border-gray-400 border-1 p-3 px-5 rounded-full"
-			/>
-			<button type="submit" className="absolute right-2 top-2 p-2 rounded-full bg-white/10 hover:bg-white/20 text-sm">
-				Comment
-			</button>
-		</form>
+
+    <form onSubmit={(e) => {e.preventDefault(); postComment()}} className="pt-2 space-y-2">
+              <textarea
+                rows={2}
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder={`Join the Conversation...`}
+                className="w-full rounded-xl border border-gray-600 bg-transparent p-2.5 text-sm focus:border-gray-400 focus:outline-none min-h-30"
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  type="submit"
+                  className="rounded-full bg-white/15 px-3.5 py-1 text-xs font-medium hover:bg-white/25 disabled:opacity-40"
+                >
+                  Comment
+                </button>
+              </div>
+            </form>
 		
 		{buildReplyTree(replies).map((rootReply) => (
       <ReplyItem

@@ -18,6 +18,19 @@ interface MarkdownContentProps {
   className?: string;
 }
 
+
+
+
+
+function isImageUrl(url?: string): boolean {
+  return Boolean(url && /\.(png|jpe?g|gif|webp|avif|svg)(\?.*)?$/i.test(url));
+}
+
+
+
+
+
+
 function extractText(node: React.ReactNode): string {
   if (typeof node === "string" || typeof node === "number") {
     return String(node);
@@ -159,6 +172,19 @@ export function MarkdownContent({
                   {displayLabel}
                 </Link>
               );
+            }
+
+            const labelText = extractText(children).trim();
+            const isBareLink = Boolean(href && labelText === href);
+
+            if (isBareLink && isImageUrl(href)){
+              return (
+                <img
+                src={href}
+                loading="lazy"
+                className="my-2 max-h-60 max-w-full rounded-lg border border-gray-700 object-contain"
+                />
+              )
             }
 
             return (
