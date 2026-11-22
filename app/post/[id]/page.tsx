@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react'
 import { useRecentPosts } from "@/hooks/useRecentPosts";
 
 import { Post, Reply } from '@/types'
+import { PostMedia } from "@/components/PostMedia"
 
 export default function PostPage(props: { params: Promise<{ id: string }> }) {
 	const supabase = createClient()
@@ -244,13 +245,14 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 			<h1 className="w-full block text-xl text-gray-100 font-bold">{post?.title}</h1>
 			
 			{post.image_url &&
-				<img 
-					src={post.image_url}
-					alt={post.title ?? ""}
-				/>
+				<PostMedia
+          href={post.image_url}
+          src={post.image_url}
+          alt={post.title ?? ""}
+        />
 			}
 
-			<p className="w-full">{post?.body}</p>
+			<p className="w-full whitespace-pre-wrap">{post?.body}</p>
 			
 			<div className="flex space-x-2">
 				<div className="flex p-2 rounded-full bg-white/10">
@@ -284,7 +286,7 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 			</div>
 		</div>
 		
-		<form className="w-full"
+		<form className="relative w-full mb-12"
 		  onSubmit={(e) => {
           e.preventDefault()
 		  postComment()
@@ -294,13 +296,9 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 			  onChange={(e) => setComment(e.target.value)}
 			  className="hover:bg-white/10 w-full border-gray-600 hover:border-gray-400 border-1 p-3 px-5 rounded-full"
 			/>
-			
-			<div className="flex">
-				<div className="w-full"></div>
-				<button type="submit" className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-sm">
-					Comment
-				</button>
-			</div>
+			<button type="submit" className="absolute right-2 top-2 p-2 rounded-full bg-white/10 hover:bg-white/20 text-sm">
+				Comment
+			</button>
 		</form>
 		
 		{

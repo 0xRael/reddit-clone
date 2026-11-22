@@ -9,6 +9,7 @@ import { useEffect, useState } from "react"
 import { formatDistanceToNow } from 'date-fns';
 
 import { Post } from "@/types"
+import { PostMedia } from "@/components/PostMedia"
 
 type Props = {
 	communityId?: string | null;
@@ -126,13 +127,14 @@ const PostsList = ({ communityId, userId, searchQuery }: Props)=>{
 					<Link href={`/post/${post.id}`} className="w-full block text-lg text-gray-100 font-bold">{post.title}</Link>
 					
 					{post.image_url ?
-						<Link href={`/post/${post.id}`} className="w-full justify-center">
-							<img 
-								src={post.image_url}
-								alt={post.title ?? ""}
-							/>
-						</Link>:
-						<Link href={`/post/${post.id}`} className="w-full">{post.body}</Link>
+            <PostMedia
+              href={`/post/${post.id}`}
+              src={post.image_url}
+              alt={post.title ?? ""}
+            /> :
+						<Link href={`/post/${post.id}`} className="w-full max-h-60 flex overflow-hidden">
+              <p className="whitespace-pre-wrap">{post.body}</p>
+            </Link>
 					}
 					
 					<div className="flex space-x-2">
