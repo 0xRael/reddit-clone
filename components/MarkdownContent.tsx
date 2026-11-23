@@ -6,7 +6,9 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { FiCheck, FiCopy } from "react-icons/fi";
 import { createClient } from "@/utils/supabase/component";
+
 import { remarkMentions } from "@/utils/remarkMentions";
+import { remarkExtras } from "@/utils/remarkExtras";
 
 const UUID_MENTION_RE =
   /@\[user:([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\]/g;
@@ -43,6 +45,69 @@ function extractText(node: React.ReactNode): string {
     return extractText(props.children);
   }
   return "";
+}
+
+function Spoiler({ children }: { children: React.ReactNode }) {
+  const [revealed, setRevealed] = useState(false);
+
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      onClick={() => setRevealed((prev) => !prev)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setRevealed((prev) => !prev);
+        }
+      }}
+      title={revealed ? "Click to hide spoiler" : "Click to reveal spoiler"}
+      className={`inline cursor-pointer rounded px-1.5 py-0.5 transition ${
+        revealed
+          ? "bg-white/10 text-gray-100"
+          : "bg-zinc-700 text-transparent select-none blur-[4px] hover:bg-zinc-600"
+      }`}
+    >
+      <span className={revealed ? "" : "opacity-0"}>{children}</span>
+    </span>
+  );
+}
+
+function SpoilerMedia({
+  src,
+  alt,
+}: {
+  src: string;
+  alt: string;
+}) {
+  const [revealed, setRevealed] = useState(false);
+
+  return (
+    <div className="relative my-2 inline-block max-w-full overflow-hidden rounded-lg border border-gray-700 bg-black/40">
+      <img
+        src={src}
+        alt={alt}
+        loading="lazy"
+        className={`max-h-60 max-w-full object-contain transition duration-200 ${
+          revealed ? "" : "blur-xl scale-105 brightness-50"
+        }`}
+      />
+      <button
+        type="button"
+        onClick={() => setRevealed((prev) => !prev)}
+        className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-3 text-center text-xs font-medium text-gray-100 transition hover:bg-black/20"
+      >
+        {!revealed && <span className="rounded-md border border-white/15 bg-zinc-900/90 px-2.5 py-1">
+          Spoiler image · Click to reveal
+        </span>}
+        {!revealed && alt && (
+          <span className="max-w-xs truncate rounded bg-black/70 px-2 py-0.5 text-[11px] text-gray-300">
+            {alt}
+          </span>
+        )}
+      </button>
+    </div>
+  );
 }
 
 function CodeBlockPre({ children }: { children?: React.ReactNode }) {
@@ -142,7 +207,7 @@ export function MarkdownContent({
   return (
     <div className={`text-base leading-relaxed space-y-2 ${className}`}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkMentions]}
+        remarkPlugins={[remarkGfm, remarkMentions, [remarkExtras, content]]}
         components={{
           h1: ({ children }) => (
             <h1 className="text-xl font-bold text-gray-100 mt-3 mb-1">{children}</h1>
@@ -153,8 +218,35 @@ export function MarkdownContent({
           h3: ({ children }) => (
             <h3 className="text-base font-semibold text-gray-100 mt-2 mb-1">{children}</h3>
           ),
+          h4: ({ children }) => (
+            <h4 className="text-sm font-semibold text-gray-100 mt-2 mb-1">{children}</h4>
+          ),
+          h5: ({ children }) => (
+            <h5 className="text-xs font-semibold text-gray-100 mt-2 mb-1">{children}</h5>
+          ),
+          h6: ({ children }) => (
+            <h6 className="text-xs text-gray-400 mt-2 mb-1">{children}</h6>
+          ),
           p: ({ children }) => (
             <p className="whitespace-pre-wrap break-words">{children}</p>
+          ),
+          span: ({ children, ...props }) => {
+            const customProps = props as Record<string, unknown>;
+              if (customProps["data-spoiler"] === "true" || customProps["data-spoiler"] === true) {
+                return <Spoiler>{children}</Spoiler>;
+              }
+
+              return <span>{children}</span>;
+            },
+          sup: ({ children }) => (
+            <sup className="ml-0.5 align-super text-[0.72em] text-gray-300">
+              {children}
+            </sup>
+          ),
+          u: ({ children }) => (
+            <u className="underline decoration-gray-400 underline-offset-2">
+              {children}
+            </u>
           ),
           pre: ({ children }) => <CodeBlockPre>{children}</CodeBlockPre>,
           a: ({ href, children, ...props }) => {
@@ -236,7 +328,16 @@ export function MarkdownContent({
             <td className="px-3 py-2 align-top">{children}</td>
           ),
           img: ({ src, alt }) => {
-            if (!src) return null;
+            if (typeof src !== "string" ||!src) return null;
+            
+            const rawAlt = alt ?? "";
+            const isSpoilerAlt = /^spoiler:\s*/i.test(rawAlt);
+            const cleanAlt = rawAlt.replace(/^spoiler:\s*/i, "").trim();
+
+            if (isSpoilerAlt) {
+              return <SpoilerMedia src={src} alt={cleanAlt} />;
+            }
+
             return (
               <img
                 src={src}

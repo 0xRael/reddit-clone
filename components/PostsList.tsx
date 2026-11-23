@@ -9,6 +9,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 import { Post } from "@/types"
 import { PostMedia } from "@/components/PostMedia"
+import { MarkdownExcerpt } from "@/components/MarkdownExcerpt"
 
 type Props = {
 	communityId?: string | null;
@@ -132,8 +133,8 @@ const PostsList = ({ communityId, userId, searchQuery }: Props)=>{
               src={post.image_url}
               alt={post.title ?? ""}
             /> :
-						<Link href={`/post/${post.id}`} className="w-full max-h-40 flex overflow-hidden">
-              <p className="whitespace-pre-wrap">{post.body}</p>
+						<Link href={`/post/${post.id}`} className="w-full line-clamp-3">
+  <MarkdownExcerpt content={post.body} hideMediaAndCodeBlocks={false} />
             </Link>
 					}
 					

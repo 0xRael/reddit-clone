@@ -6,6 +6,7 @@ import { createClient } from "@/utils/supabase/component"
 import { formatDistanceToNow } from "date-fns"
 
 import { Notification } from '@/types'
+import { MarkdownExcerpt } from '@/components/MarkdownExcerpt'
 
 export default function NotificationsPage() {
   const supabase = createClient()
@@ -82,11 +83,9 @@ export default function NotificationsPage() {
 				  {n.type === "upvote" && "upvoted your post."}
 				  {/* add more types as needed */}
 				</div>
-				<div className="text-gray-400">
-					{n.reply?.text
-				  ? n.reply?.text.slice(0, 100) + (n.reply?.text.length > 100 ? "…" : "")
-				  : ""}
-			    </div>
+				{n.reply && <div className="line-clamp-2 text-sm text-gray-300">
+          <MarkdownExcerpt content={n.reply.text} hideMediaAndCodeBlocks={false} />
+        </div>}
 				<div className="text-xs text-gray-400">
 				  {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
 				</div>
