@@ -21,7 +21,8 @@ export type Post = {
   }
   communities: {
     name: string | null,
-    icon_url: string | null
+    icon_url: string | null,
+    owner_id: string | null
   }
   post_votes_view: {upvotes: number,downvotes: number}[],
   post_replies_view: {count: number}[]
@@ -65,7 +66,8 @@ export type Join = {
   community_id: string
   communities: {
     name: string,
-    icon_url: string | null
+    icon_url: string | null,
+    id: string | null
   }
 }
 

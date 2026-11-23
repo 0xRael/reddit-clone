@@ -2,30 +2,40 @@
 
 import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { FaRegThumbsUp, FaRegThumbsDown, FaShare } from "react-icons/fa6";
-import { FiMessageCircle } from "react-icons/fi";
-import { SlOptions } from "react-icons/sl";
+import { FaRegThumbsUp, FaRegThumbsDown } from "react-icons/fa6";
+import { FiMessageCircle, FiTrash, FiCopy } from "react-icons/fi";
+import { LuPencil } from "react-icons/lu";
 import { Reply } from "@/types";
-import { MarkdownContent } from "@/components/MarkdownContent"
+import { MarkdownContent } from "@/components/MarkdownContent";
 
 interface ReplyItemProps {
   reply: Reply;
+  currentUserId?: string | null;
   userReplyVotes: Record<string, number>;
   onVoteReply: (replyId: string, voteType: number) => void;
   onSubmitReply: (text: string, parentReplyId: string) => Promise<void>;
+  onEditReply: (replyId: string, newText: string) => Promise<void>;
+  onDeleteReply: (replyId: string) => Promise<void>;
   depth?: number;
 }
 
 export function ReplyItem({
   reply,
+  currentUserId,
   userReplyVotes,
   onVoteReply,
   onSubmitReply,
+  onEditReply,
+  onDeleteReply,
   depth = 0,
 }: ReplyItemProps) {
   const [isReplying, setIsReplying] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(reply.text);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const children = reply.children ?? [];
   const hasChildren = children.length > 0;
@@ -50,6 +60,20 @@ export function ReplyItem({
     }
   }
 
+  async function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = editText.trim();
+    if (!trimmed || isSavingEdit) return;
+
+    setIsSavingEdit(true);
+    try {
+      await onEditReply(reply.id, trimmed);
+      setIsEditing(false);
+    } finally {
+      setIsSavingEdit(false);
+    }
+  }
+
   return (
     <div className={depth === 0 ? "mb-6" : ""}>
       {/* Comment Row: Avatar Rail + Content */}
@@ -65,7 +89,7 @@ export function ReplyItem({
           />
         )}
 
-        {/* Right column: Header, Body, Actions, Inline Reply Box */}
+        {/* Right column: Header, Body, Actions, Inline Reply/Edit Box */}
         <div className="flex-1 min-w-0 space-y-1.5">
           {/* Header */}
           <div className="flex items-center text-sm space-x-2 h-8">
@@ -83,8 +107,38 @@ export function ReplyItem({
             </span>
           </div>
 
-          {/* Body */}
-          <MarkdownContent content={reply.text} className="w-full text-base" />
+          {/* Body or Inline Edit Box */}
+          {isEditing ? (
+            <form onSubmit={handleEditSubmit} className="space-y-2">
+              <textarea
+                rows={3}
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                className="w-full rounded-xl border border-gray-600 bg-transparent p-2.5 text-sm focus:border-gray-400 focus:outline-none"
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setEditText(reply.text);
+                  }}
+                  className="rounded-full px-3 py-1 text-xs text-gray-300 hover:bg-white/10"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingEdit || !editText.trim()}
+                  className="rounded-full bg-white/15 px-3.5 py-1 text-xs font-medium hover:bg-white/25 disabled:opacity-40"
+                >
+                  {isSavingEdit ? "Saving..." : "Save"}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <MarkdownContent content={reply.text} className="w-full text-base" />
+          )}
 
           {/* Actions */}
           <div className="flex items-center space-x-1 text-gray-300 text-sm pt-0.5">
@@ -125,20 +179,29 @@ export function ReplyItem({
               <span className="ml-1.5 text-xs">Reply</span>
             </button>
 
-            {/*<button
-              type="button"
-              className="flex items-center px-2.5 py-1.5 rounded-full hover:bg-white/10"
-            >
-              <FaShare />
-              <span className="ml-1.5 text-xs">Share</span>
-            </button>
-
-            <button
-              type="button"
-              className="p-1.5 rounded-full hover:bg-white/10"
-            >
-              <SlOptions />
-            </button>*/}
+            {currentUserId === reply.user_id && (
+              <><button
+                type="button"
+                onClick={() => {
+                  setEditText(reply.text);
+                  setIsEditing((prev) => !prev);
+                }}
+                className="flex items-center px-2.5 py-1.5 rounded-full hover:bg-white/10"
+              >
+                <LuPencil />
+                <span className="ml-1.5 text-xs">Edit</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onDeleteReply(reply.id);
+                }}
+                className="flex items-center text-red-400 px-2.5 py-1.5 rounded-full hover:bg-white/10"
+              >
+                <FiTrash />
+                <span className="ml-1.5 text-xs">Delete</span>
+              </button></>
+            )}
           </div>
 
           {/* Inline Reply Box */}
@@ -199,9 +262,12 @@ export function ReplyItem({
 
                 <ReplyItem
                   reply={child}
+                  currentUserId={currentUserId}
                   userReplyVotes={userReplyVotes}
                   onVoteReply={onVoteReply}
                   onSubmitReply={onSubmitReply}
+                  onEditReply={onEditReply}
+                  onDeleteReply={onDeleteReply}
                   depth={depth + 1}
                 />
               </div>

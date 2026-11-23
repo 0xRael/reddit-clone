@@ -141,9 +141,9 @@ const Navbar = () => {
       </form>
 
 	  {username ? (
-        <div className="block flex space-x-1">
+        <div className="block flex">
 		  <Link href="/submit" className="flex p-2 rounded-full hover:bg-white/20">
-			<FaPlus size={22} className="mr-3" /> Create
+			<FaPlus size={22} /> <span className="ml-3 max-sm:hidden">Create</span>
 		  </Link>
 
 		    <Link
@@ -163,16 +163,17 @@ const Navbar = () => {
             <button
               type="button"
               onClick={() => setMenuOpen((open) => !open)}
-              className="block mt-2 px-2 py-1 rounded hover:bg-white/20 cursor-pointer"
+              className="flex block px-1 rounded-full hover:bg-white/20 cursor-pointer"
             >
-              {username}
+              <span className="mt-2 mx-2 max-sm:hidden">{username}</span>
+              <div className="bg-slate-400 rounded-full my-1 w-8 h-8"></div>
             </button>
 
             {menuOpen && (
-              <div className="absolute right-0 z-20 mt-2 w-44 overflow-hidden rounded-xl border border-white/10 bg-slate-900/95 shadow-xl backdrop-blur-xl">
+              <div className="absolute right-0 z-20 mt-2 w-44 overflow-hidden rounded-xl border border-white/10 bg-background shadow-xl">
 				<Link
                   href={`/user/${userId}`}
-                  className="flex px-4 py-2 text-sm text-white hover:bg-white/10"
+                  className="flex px-4 py-2 text-sm text-white hover:bg-white/10 items-center"
                   onClick={() => setMenuOpen(false)}
                 >
             		<div className="ml-1 mr-2">
@@ -210,7 +211,6 @@ const Navbar = () => {
               </div>
             )}
           </div>
-          <div className="bg-slate-400 rounded-full my-1 w-8 h-8"></div>
         </div>
       ) : (
         <Link href="/login" className="block hover:underline">

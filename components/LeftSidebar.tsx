@@ -11,7 +11,7 @@ import { PiChartBarFill } from "react-icons/pi";
 import { useModal } from '@/components/ModalProvider';
 import { useState, useEffect } from 'react';
 
-import { Join } from '@/types'
+import { Join, Community } from '@/types'
 
 const SIDEBAR_ITEMS = [
 	{
@@ -36,12 +36,37 @@ const SIDEBAR_ITEMS = [
 	}
 ]
 
+const CommunityLink = ({community} : {community: {id:string|null, name:string|null, icon_url:string|null}})=>{
+  return (
+    <Link 
+		  className="flex items-center relative rounded-md p-2 hover:bg-white/10" 
+		  href={`/community/${community.id}`} 
+	  >
+		  <div className="ml-2 mr-4 shrink-0">
+			  <div className="bg-slate-400 rounded-full w-7 h-7 overflow-hidden flex items-center justify-center">
+				  {community.icon_url ? (
+					  <img 
+						  src={community.icon_url} 
+						  alt={community.name ?? "Community icon"} 
+						  className="w-full h-full object-cover"
+					  />
+				  ) : null}
+			  </div>
+		  </div>
+		  <div className="truncate">
+			  {community.name ?? ""}
+		  </div>
+		  </Link>
+  )
+}
+
 const LeftSidebar = ()=>{
 	const { openCommunityCreator } = useModal()
 	
 	const supabase = createClient()
 	const [isOpen, setIsOpen] = useState<boolean>(false);
 	const [joins, setJoins] = useState<Join[]>([])
+  const [ownedCommunities, setOwnedCommunities] = useState<Community[]>([])
 	
 	function toggleSidebar () {
 		setIsOpen(!isOpen);
@@ -61,12 +86,20 @@ const LeftSidebar = ()=>{
 				*,
 				communities (
 					name,
-					icon_url
+          icon_url,
+          id
 				)
 			`)
 			.eq('user_id', user.id)
 			
 			setJoins(data ?? [])
+
+      const { data: communities } = await supabase
+      .from('communities')
+      .select('*')
+      .eq('owner_id', user.id)
+
+      setOwnedCommunities(communities ?? [])
 		}
 		
 		load();
@@ -95,12 +128,7 @@ const LeftSidebar = ()=>{
 				})
 			}
 			
-			<hr className="my-5 border-gray-700"/>
-			
-			{/* Community List */}
-			<h6 className="text-sm text-gray-500 mb-3 mx-2">COMMUNITIES</h6>
-			
-			<button onClick={openCommunityCreator} className="w-full flex relative rounded-md p-2 hover:bg-white/10">
+      <button onClick={openCommunityCreator} className="w-full flex relative rounded-md p-2 hover:bg-white/10">
 				<div className="ml-2 mr-4">
 					<FaPlus size={22} />
 				</div>
@@ -108,33 +136,20 @@ const LeftSidebar = ()=>{
 					Create Community
 				</div>
 			</button>
+
+      {ownedCommunities.length > 0 && <><hr className="my-5 border-gray-700"/>
+			<h6 className="text-sm text-gray-500 mb-3 mx-2">MODERATION</h6>
 			
 			{
-				joins.map((join)=>{
-				return (
-					<Link 
-						className="flex items-center relative rounded-md p-2 hover:bg-white/10" 
-						href={`/community/${join.community_id}`} 
-						key={`${join.id}`}
-					>
-						<div className="ml-2 mr-4 shrink-0">
-							<div className="bg-slate-400 rounded-full w-7 h-7 overflow-hidden flex items-center justify-center">
-								{join.communities?.icon_url ? (
-									<img 
-										src={join.communities.icon_url} 
-										alt={join.communities.name ?? "Community icon"} 
-										className="w-full h-full object-cover"
-									/>
-								) : null}
-							</div>
-						</div>
-						<div>
-							{join.communities?.name ?? ""}
-						</div>
-						</Link>
-					);
-				})
-			}
+				ownedCommunities.map((community)=><CommunityLink key={community.id} community={community} />)
+			}</>}
+
+			{joins.length > 0 && <><hr className="my-5 border-gray-700"/>
+			<h6 className="text-sm text-gray-500 mb-3 mx-2">JOINED COMMUNITIES</h6>
+			
+			{
+				joins.map((join)=>(join.communities ? <CommunityLink key={join.communities.id} community={join.communities} /> : <></>))
+			}</>}
 		</section>
 		</>
 	)

@@ -1,10 +1,12 @@
 "use client"
 
+import Link from 'next/link'
 import { createClient } from '@/utils/supabase/component';
 import CommunityInfo from '@/components/CommunityInfo';
 import { FaRegThumbsUp, FaRegThumbsDown, FaShare } from "react-icons/fa6";
 import { FiMessageCircle, FiTrash, FiCopy } from "react-icons/fi";
 import { SlOptions } from "react-icons/sl";
+import { LuPencil } from "react-icons/lu";
 import { formatDistanceToNow } from 'date-fns';
 import { useEffect, useState } from 'react'
 import { useRecentPosts } from "@/hooks/useRecentPosts";
@@ -22,12 +24,15 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 	const [replies, setReplies] = useState<Reply[]>([])
 	const [comment, setComment] = useState('')
 	const [showDropdown, setShowDropdown] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [isModerator, setIsModerator] = useState(false)
 	const { addPostId } = useRecentPosts(); // To register into recent posts
 
   const [userPostVote, setUserPostVote] = useState<number | null>(null)
 	const [userReplyVotes, setUserReplyVotes] = useState<Record<string, number>>({})
 	
 	const loadPost = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
 		const { id } = await props.params
 		
 		const { data: fetched_post } = await supabase
@@ -39,7 +44,8 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 			),
 			communities (
 				name,
-				icon_url
+				icon_url,
+        owner_id
 			),
 			post_votes_view (
 				upvotes,
@@ -53,6 +59,8 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
 		.single<Post>()
 		
 		setPost(fetched_post);
+    user && setCurrentUserId(user.id);
+    setIsModerator(user?.id === fetched_post?.communities?.owner_id)
 		addPostId(id);
 		
 		const { data: fetched_replies } = await supabase
@@ -73,7 +81,6 @@ const replyList = fetched_replies ?? [];
 		setReplies(replyList);
 
 		// Load current user's existing votes so active buttons stay highlighted
-		const { data: { user } } = await supabase.auth.getUser()
 		if (!user) {
 			setUserPostVote(null)
 			setUserReplyVotes({})
@@ -246,6 +253,44 @@ async function postComment(textToPost = comment, parentReplyId: string | null = 
   }
 }
 
+async function handleEditReply(replyId: string, newText: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const formattedText = await resolveMentionsToTokens(newText);
+
+  const { error } = await supabase
+    .from("replies")
+    .update({ text: formattedText })
+    .eq("id", replyId)
+    .eq("user_id", user.id);
+
+  if (error) {
+    console.error("Failed to update reply:", error);
+    alert("Could not save reply changes.");
+    return;
+  }
+}
+
+async function handleDeleteReply(replyId: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { error } = await supabase
+    .from("replies")
+    .delete()
+    .eq("id", replyId)
+    .eq("user_id", user.id);
+
+  if (error) {
+    console.error("Failed to delete reply:", error);
+    alert("Could not delete reply changes.");
+    return;
+  } else {
+    alert("Reply deleted succesfully.");
+  }
+}
+
 	function copyLink(postId: string) {
 	  const url = `${window.location.origin}/post/${postId}`
 	  navigator.clipboard.writeText(url)
@@ -306,18 +351,26 @@ async function postComment(textToPost = comment, parentReplyId: string | null = 
                     <div className="absolute right-0 mt-2 w-32 bg-background border border-gray-700 rounded shadow-lg z-10">
 						<button
 						onClick={() => copyText(post.body ?? "")}
-						className="block flex w-full text-left p-4 text-sm hover:bg-white/5"
+						className="block cursor-pointer flex w-full text-left p-4 text-sm hover:bg-white/5"
 						>
 							<FiCopy size={20} className="mr-2" />
 							Copy Text
 						</button>
-						<button
+            {currentUserId == post.user_id && <Link
+						href={`/submit?edit=${post.id}`}
+						className="block flex w-full text-left p-4 text-sm hover:bg-white/5"
+						>
+							<LuPencil size={20} className="mr-2" />
+							Edit Post
+						</Link>}
+
+						{isModerator && <button
 						onClick={deletePost}
-						className="block flex w-full text-left p-4 text-sm text-red-400 hover:bg-white/5"
+						className="block cursor-pointer flex w-full text-left p-4 text-sm text-red-400 hover:bg-white/5"
 						>
 							<FiTrash size={20} className="mr-2" />
 							Delete
-                        </button>
+            </button>}
                     </div>
                   )}
                 </div>
@@ -389,9 +442,12 @@ async function postComment(textToPost = comment, parentReplyId: string | null = 
       <ReplyItem
         key={rootReply.id}
         reply={rootReply}
+        currentUserId={currentUserId}
         userReplyVotes={userReplyVotes}
         onVoteReply={voteReply}
         onSubmitReply={(text, parentReplyId) => postComment(text, parentReplyId)}
+        onEditReply={handleEditReply}
+        onDeleteReply={handleDeleteReply}
       />
     ))}
 		

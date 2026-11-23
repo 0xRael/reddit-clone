@@ -15,6 +15,9 @@ export default function PostingPage() {
 	const router = useRouter()
 	const supabase = createClient()
 
+	const editId = searchParams.get('edit')
+	const isEditing = Boolean(editId)
+
 	// Form states
 	const [title, setTitle] = useState('')
 	const [body, setBody] = useState('')
@@ -22,6 +25,7 @@ export default function PostingPage() {
 	const [communityName, setCommunityName] = useState<string | null>(null)
 	const [communityIcon, setCommunityIcon] = useState<string | null>(null)
 
+	const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null)
 	const [imageFile, setImageFile] = useState<File | null>(null)
 	const [isUploading, setIsUploading] = useState<boolean>(false)
 	const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -30,8 +34,10 @@ export default function PostingPage() {
 	const [joinedCommunities, setJoinedCommunities] = useState<Join[]>([])
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
-	// 1. Fetch initial community from URL (if any)
+	// 1. Fetch initial community from URL (if any) when creating
 	useEffect(() => {
+	if (isEditing) return;
+
 	const id = searchParams.get('community')
 	setCommunityId(id)
 
@@ -52,7 +58,7 @@ export default function PostingPage() {
 	}
 
 	fetchCommunity()
-	}, [searchParams, supabase])
+	}, [isEditing, searchParams, supabase])
 
 	// 2. Fetch the list of communities the user has joined
 	useEffect(() => {
@@ -81,6 +87,42 @@ export default function PostingPage() {
 		
 		loadCommunities();
 	}, [supabase])
+
+	// 3. Load existing post when ?edit=<id> is provided
+	useEffect(() => {
+		if (!editId) return;
+
+		async function loadPost() {
+			const { data, error } = await supabase
+				.from('posts')
+				.select(`
+					title,
+					body,
+					community_id,
+					image_url,
+					communities (
+						name,
+						icon_url
+					)
+				`)
+				.eq('id', editId)
+				.single()
+
+			if (error) {
+				console.error('Error loading post:', error)
+			} else if (data) {
+				const comm = Array.isArray(data.communities) ? data.communities[0] : data.communities
+				setTitle(data.title ?? '')
+				setBody(data.body ?? '')
+				setCommunityId(data.community_id ?? null)
+				setCommunityName(comm?.name ?? null)
+				setCommunityIcon(comm?.icon_url ?? null)
+				setExistingImageUrl(data.image_url ?? null)
+			}
+		}
+
+		loadPost()
+	}, [editId, supabase])
   
   async function post() {
     setIsUploading(true)
@@ -91,7 +133,7 @@ export default function PostingPage() {
         return;
     }
     
-    let imageUrl = null
+    let imageUrl = existingImageUrl
 
     if (imageFile) {
         // Grab the extension (e.g. .png) and create a unique filename using Date.now()
@@ -122,22 +164,29 @@ export default function PostingPage() {
     
     const formattedText = await resolveMentionsToTokens(body);
 
-    // Save the post to the database (now including the imageUrl)
-    const { error } = await supabase
-        .from("posts")
-        .insert({
-            title: title,
-            body: formattedText,
-            user_id: user.id,
-            community_id: communityId,
-            image_url: imageUrl 
-        })
+    const payload = {
+        title: title,
+        body: formattedText,
+        user_id: user.id,
+        community_id: communityId,
+        image_url: imageUrl
+    }
+
+    const { error } = isEditing && editId
+        ? await supabase
+            .from("posts")
+            .update(payload)
+            .eq("id", editId)
+            .eq("user_id", user.id)
+        : await supabase
+            .from("posts")
+            .insert(payload)
         
     if (error) {
-        console.error("An error ocurred when posting:", error);
+        console.error("An error ocurred when saving post:", error);
         setIsUploading(false)
     } else {
-        router.push("/");
+        router.push(isEditing && editId ? `/post/${editId}` : "/");
     }
 }
   
@@ -150,7 +199,7 @@ export default function PostingPage() {
         }}
 		className="w-full max-w-2xl space-y-4"
       >
-		<h1 className="text-2xl font-bold">Create post</h1>
+		<h1 className="text-2xl font-bold">{isEditing ? "Edit post" : "Create post"}</h1>
 		
 		{/* Dropdown Container */}
 		<div className="relative inline-block z-10">
@@ -263,14 +312,15 @@ export default function PostingPage() {
 				className="p-3 hover:bg-white/10 text-gray-400 flex items-center space-x-2"
 			>
 				<span>Images & Video</span>
-				{imageFile && (
+				{(imageFile || existingImageUrl) && (
 					<span className="text-xs bg-blue-600 text-white pl-2 pr-1 py-0.5 rounded-full flex items-center space-x-1 max-w-[160px]">
-						<span className="truncate">{imageFile.name}</span>
+						<span className="truncate">{imageFile ? imageFile.name : "Current image"}</span>
 						<span 
 							role="button"
 							onClick={(e) => {
 								e.stopPropagation() // Prevents opening the file picker again!
 								setImageFile(null)
+								setExistingImageUrl(null)
 								if (fileInputRef.current) {
 									fileInputRef.current.value = '' // Clears the native input
 								}
@@ -292,19 +342,23 @@ export default function PostingPage() {
 			placeholder="Title"
 			type="text"
 			required
+			value={title}
 			onChange={(e) => setTitle(e.target.value)}
 			className="block p-3 border-gray-700 hover:border-gray-500 hover:bg-white/5 border-1 rounded-xl w-full max-w-2xl placeholder:text-gray-400"
 			/>
 		
 		<textarea
 			placeholder="Body Text"
+			value={body}
 			onChange={(e) => setBody(e.target.value)}
 			className="block p-3 border-gray-700 min-h-30 hover:border-gray-500 hover:bg-white/5 border-1 rounded-xl w-full max-w-2xl placeholder:text-gray-400"
 			/>
 		
 		<div className="flex">
 			<div className="w-full"></div>
-			<button type="submit" className="py-3 px-5 rounded-full bg-white/10 hover:bg-white/20">Post</button>
+			<button type="submit" disabled={isUploading} className="py-3 px-5 rounded-full bg-white/10 hover:bg-white/20">
+				{isUploading ? "Saving..." : isEditing ? "Save" : "Post"}
+			</button>
 		</div>
       </form>
     </div>
