@@ -5,7 +5,11 @@ export type Community = {
   banner_url: string | null
   description: string | null
   created_at: string,
-  owner_id: string
+  owner_id: string,
+  owner?: {
+    id: string | null,
+    username: string
+  }
 }
 
 export type Post = {

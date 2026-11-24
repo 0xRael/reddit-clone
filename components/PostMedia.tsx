@@ -17,7 +17,7 @@ export function PostMedia({
   return (
     <Link
       href={href}
-      className={`relative w-full max-h-130 flex border-1 border-gray-700 hover:border-gray-500 overflow-hidden rounded-xl justify-center ${className}`}
+      className={`relative w-full max-sm:max-h-100 sm:max-h-130 flex border-1 border-gray-700 hover:border-gray-500 overflow-hidden rounded-xl justify-center ${className}`}
     >
       <div
         aria-hidden="true"
@@ -33,7 +33,7 @@ export function PostMedia({
       <img
         src={src}
         alt={alt}
-        className="max-h-130"
+        className="max-sm:max-h-100 sm:max-h-130"
       />
     </Link>
   );

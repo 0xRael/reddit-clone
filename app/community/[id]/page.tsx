@@ -9,13 +9,17 @@ import { FaPlus } from "react-icons/fa6";
 import { LuPencil } from "react-icons/lu";
 import { SlOptions } from "react-icons/sl";
 
-import { Community } from '@/types'
+import { Community, Join } from '@/types'
+import { useModal } from '@/components/ModalProvider'
 
 export default function CommunityPage(props: { params: Promise<{ id: string }> }) {
 	const supabase = createClient()
 	
 	const [community, setCommunity] = useState<Community | null>(null)
+  const { openCommunityCreator } = useModal()
+
 	const [isOwner, setIsOwner] = useState(false)
+  const [hasJoined, setHasJoined] = useState(false)
 	const [uploadingBanner, setUploadingBanner] = useState(false)
 	const [uploadingIcon, setUploadingIcon] = useState(false)
 
@@ -33,12 +37,24 @@ export default function CommunityPage(props: { params: Promise<{ id: string }> }
 				.eq('id', id)
 				.single<Community>()
 			
-			if (fetched_community) {
-				setCommunity(fetched_community)
-				if (user && user.id === fetched_community.owner_id) {
-					setIsOwner(true)
-				}
+			if (!fetched_community) {
+        return
 			}
+      setCommunity(fetched_community)
+      if(!user) {
+        return
+      }
+
+			setIsOwner(user.id === fetched_community.owner_id)
+      
+      const { data: joinExists } = await supabase
+        .from('joins')
+        .select('*')
+        .eq('community_id', id)
+        .eq('user_id', user.id)
+        .maybeSingle<Join>()
+ 
+      setHasJoined(joinExists !== null)
 		}
 
 		load()
@@ -96,16 +112,32 @@ export default function CommunityPage(props: { params: Promise<{ id: string }> }
 			return
 		}
 	  
+    if(hasJoined) {
+      const { data, error } = await supabase
+			  .from("joins")
+			  .delete()
+        .eq('user_id', user.id)
+        .eq('community_id', id)
+      if (error) {
+			  console.error("Error joining:", error)
+        return
+		  }
+      setHasJoined(false)
+      return
+    }
+
 		const { data, error } = await supabase
 			.from("joins")
 			.insert({
 				user_id: user.id,
 				community_id: id
 			})
-		
-		if (error) {
+
+    if (error) {
 			console.error("Error joining:", error)
+      return
 		}
+    setHasJoined(true)
 	}
 	
 	return (
@@ -156,11 +188,11 @@ export default function CommunityPage(props: { params: Promise<{ id: string }> }
 				</div>
 
 				{/* Community Header Bar */}
-				<div className="w-full flex h-10 my-3 ml-2 space-x-2">
+				<div className="w-full flex sm:h-10 max-sm:h-8 my-3 ml-2 space-x-2">
 					{/* Community Icon */}
 					<div 
 						onClick={() => isOwner && iconInputRef.current?.click()}
-						className={`bg-slate-400 relative -top-10 rounded-full border-neutral-900 border-4 w-20 h-20 overflow-hidden shrink-0 group ${isOwner ? 'cursor-pointer' : ''}`}
+						className={`bg-slate-400 relative sm:-top-10 max-sm:-top-7 rounded-full border-neutral-900 border-4 sm:w-20 sm:h-20 max-sm:w-15 max-sm:h-15 overflow-hidden shrink-0 group ${isOwner ? 'cursor-pointer' : ''}`}
 					>
 						{community.icon_url ? (
 							<img 
@@ -177,18 +209,21 @@ export default function CommunityPage(props: { params: Promise<{ id: string }> }
 						)}
 					</div>
 
-					<h1 className="text-xl text-gray-100 font-bold">{community.name}</h1>
+					<h1 className="sm:text-xl mr-auto text-gray-100 font-bold truncate">{community.name}</h1>
 					
-					<Link href={`/submit?community=${community.id}`} className="ml-auto flex rounded-full p-2 border-gray-700 hover:border-gray-500 border-1 space-x-2">
+					<Link href={`/submit?community=${community.id}`} className="max-sm:hidden flex rounded-full p-2 sm:pr-3 border-gray-700 hover:bg-white/5 hover:border-gray-500 border-1 sm:space-x-2">
 						<FaPlus size={22} />
-						<div>Create Post</div>
+						<div className="max-sm:hidden">Create Post</div>
 					</Link>
-					<button onClick={join} className="rounded-full p-2 px-4 bg-blue-800 hover:bg-blue-600">
-						Join
-					</button>
-					<Link href={`/submit?community=${community.id}`} className="rounded-full p-2 border-gray-700 hover:border-gray-500 border-1 space-x-2">
-						<SlOptions size={22} />
-					</Link>
+					{!isOwner && <button onClick={join} className="max-sm:text-xs rounded-full p-2 sm:px-4 bg-blue-800 hover:bg-blue-600 cursor-pointer">
+						{hasJoined ? "Leave" : "Join"}
+					</button>}
+					{isOwner && <button
+            onClick={() => openCommunityCreator(community, setCommunity)}
+            className="rounded-full p-2 border-gray-700 hover:bg-white/5 hover:border-gray-500 border-1 space-x-2 cursor-pointer"
+          >
+						<LuPencil size={22} />
+					</button>}
 				</div>
 			</div>
 			

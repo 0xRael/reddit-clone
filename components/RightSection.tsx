@@ -58,7 +58,7 @@ const RightSection = () => {
     if (postIds.length === 0) return null;
 
     return (
-        <section className="lg:sticky max-lg:hidden top-14 w-74 h-fit py-5 ml-5">
+        <section className="md:sticky max-md:hidden top-14 w-74 h-fit py-5 ml-5">
             <div className="bg-black rounded-xl w-full py-4">
                 <div className="flex justify-between items-center mb-3 px-4">
                     <h6 className="text-[10px] font-bold text-gray-500 uppercase">Recent Posts</h6>

@@ -128,7 +128,7 @@ const LeftSidebar = ()=>{
 				})
 			}
 			
-      <button onClick={openCommunityCreator} className="w-full flex relative rounded-md p-2 hover:bg-white/10">
+      <button onClick={() => openCommunityCreator()} className="w-full flex relative rounded-md p-2 cursor-pointer hover:bg-white/10">
 				<div className="ml-2 mr-4">
 					<FaPlus size={22} />
 				</div>

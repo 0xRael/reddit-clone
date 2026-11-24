@@ -33,7 +33,7 @@ export default function SearchingPage() {
         <div className="w-full h-full justify-center">
             <div className="w-full h-full justify-center flex relative">
 				<PostsList searchQuery={searchParams.get('q')}/>
-                <section className="lg:sticky max-lg:hidden top-14 w-74 h-[calc(100vh-3.5rem)] overflow-y-hidden hover:overflow-y-scroll overflow-x-hidden overscroll-contain py-5 ml-5">
+                <section className="md:sticky max-md:hidden top-14 w-74 h-[calc(100vh-3.5rem)] overflow-y-hidden hover:overflow-y-scroll overflow-x-hidden overscroll-contain py-5 ml-5">
                     <div className="bg-black text-gray-400 rounded-xl w-full p-5 space-y-2">
                         <h6 className="text-[10px] font-bold text-gray-500 uppercase">Communities</h6>
 
