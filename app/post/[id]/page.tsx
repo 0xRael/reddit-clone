@@ -15,6 +15,7 @@ import { Post, Reply } from '@/types'
 import { PostMedia } from "@/components/PostMedia"
 import { ReplyItem } from "@/components/ReplyItem";
 import { MarkdownContent } from "@/components/MarkdownContent"
+import { MarkdownEditor } from "@/components/MarkdownEditor"
 
 import { resolveMentionsToTokens } from "@/utils/mentions";
 
@@ -421,12 +422,11 @@ async function handleDeleteReply(replyId: string) {
 		</div>
 
     <form onSubmit={(e) => {e.preventDefault(); postComment()}} className="pt-2 space-y-2">
-              <textarea
-                rows={2}
+              <MarkdownEditor
                 value={comment}
-                onChange={(e) => setComment(e.target.value)}
+                onChange={(value) => setComment(value)}
                 placeholder={`Join the Conversation...`}
-                className="w-full rounded-xl border border-gray-600 bg-transparent p-2.5 text-sm focus:border-gray-400 focus:outline-none min-h-30"
+                
               />
               <div className="flex justify-end gap-2">
                 <button

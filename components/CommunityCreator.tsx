@@ -5,6 +5,8 @@ import { createClient } from '@/utils/supabase/component'
 import { resolveMentionsToTokens } from "@/utils/mentions";
 import { Community } from '@/types'
 
+import { MarkdownEditor } from "@/components/MarkdownEditor"
+
 type Props = {
   open: boolean
   onClose: () => void
@@ -88,7 +90,7 @@ export default function CommunityCreator({ open, onClose, community, onSaved }: 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-background text-white rounded-xl w-full max-w-lg p-6 shadow-lg relative">
+      <div className="bg-background text-white rounded-xl w-full max-w-2xl p-6 shadow-lg relative">
         <button
           type="button"
           onClick={onClose}
@@ -119,11 +121,11 @@ export default function CommunityCreator({ open, onClose, community, onSaved }: 
 
         <label className="block mb-6">
           <span className="block text-sm font-medium">Description *</span>
-          <textarea
+          <MarkdownEditor
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="mt-1 w-full p-3 rounded-xl min-h-30 hover:bg-white/5 border border-gray-700 hover:border-gray-500 placeholder:text-gray-400"
+            onChange={(value) => setDescription(value)}
             placeholder="Your community description"
+            minHeightClass="min-h-40 max-h-60 overscroll-contain overflow-y-scroll"
           />
         </label>
 

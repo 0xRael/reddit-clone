@@ -7,6 +7,7 @@ import { IoIosArrowDown } from "react-icons/io";
 import { Join } from '@/types'
 
 import { resolveMentionsToTokens } from "@/utils/mentions";
+import { MarkdownEditor } from "@/components/MarkdownEditor"
 
 const MAX_FILE_SIZE = 3 * 1024 * 1024 // 3MB in bytes
 
@@ -300,7 +301,7 @@ export default function PostingPage() {
 		/>
 
 		{/* Post Options */}
-		<div className="mt-7 space-x-5 text-white border-b border-gray-700 flex items-center">
+		<div className="space-x-5 text-white border-b border-gray-700 flex items-center">
 			<button type="button" className="p-3 border-blue-400 border-b-2 hover:bg-white/10 font-medium">
 				Text
 			</button>
@@ -347,11 +348,11 @@ export default function PostingPage() {
 			className="block p-3 border-gray-700 hover:border-gray-500 hover:bg-white/5 border-1 rounded-xl w-full max-w-2xl placeholder:text-gray-400"
 			/>
 		
-		<textarea
+		<MarkdownEditor
 			placeholder="Body Text"
 			value={body}
-			onChange={(e) => setBody(e.target.value)}
-			className="block p-3 border-gray-700 min-h-30 hover:border-gray-500 hover:bg-white/5 border-1 rounded-xl w-full max-w-2xl placeholder:text-gray-400"
+			onChange={(value) => setBody(value)}
+			minHeightClass="min-h-50"
 			/>
 		
 		<div className="flex">

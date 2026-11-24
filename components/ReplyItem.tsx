@@ -7,6 +7,7 @@ import { FiMessageCircle, FiTrash, FiCopy } from "react-icons/fi";
 import { LuPencil } from "react-icons/lu";
 import { Reply } from "@/types";
 import { MarkdownContent } from "@/components/MarkdownContent";
+import { MarkdownEditor } from "@/components/MarkdownEditor";
 
 interface ReplyItemProps {
   reply: Reply;
@@ -110,11 +111,12 @@ export function ReplyItem({
           {/* Body or Inline Edit Box */}
           {isEditing ? (
             <form onSubmit={handleEditSubmit} className="space-y-2">
-              <textarea
-                rows={3}
+              <MarkdownEditor
                 value={editText}
-                onChange={(e) => setEditText(e.target.value)}
-                className="w-full rounded-xl border border-gray-600 bg-transparent p-2.5 text-sm focus:border-gray-400 focus:outline-none"
+                onChange={(value) => setEditText(value)}
+                placeholder={`Join the Conversation...`}
+                minHeightClass="min-h-20"
+                
               />
               <div className="flex justify-end gap-2">
                 <button
