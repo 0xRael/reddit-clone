@@ -1,39 +1,68 @@
-"use client";
+import { cache } from "react";
+import { unstable_cache } from "next/cache";
+import { createClient as createAnonClient } from "@supabase/supabase-js";
+import { STALE_TIMES } from "@/utils/queryTimings";
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { UserPageClient } from "./UserPageClient";
 
-import { use } from "react";
-import { useQuery } from "@tanstack/react-query";
-import PostsList from "@/components/PostsList";
-import { userQueryOptions } from "@/utils/queries/users";
 
-export default function UserPage(props: { params: Promise<{ id: string }> }) {
-  const { id } = use(props.params);
-  const { data: user } = useQuery({
-    ...userQueryOptions(id),
-    enabled: Boolean(id),
-  });
+const fetchUserCached = (id: string) =>
+  unstable_cache(
+    async () => {
+      const supabase = createAnonClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
+      );
 
-  return (
-    <div className="w-full h-full justify-center">
-      {user ? (
-        <>
-          <div className="w-full h-full justify-center flex relative">
-            <div>
-              {/* User Header Bar */}
-              <div className="w-full flex h-10 my-3 ml-2 space-x-2">
-                {/* User Icon */}
-                <div className="bg-slate-400 relative rounded-full w-14 h-14 overflow-hidden shrink-0 group"></div>
+      const { data, error } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", id)
+        .single();
 
-                <h1 className="text-xl mt-3 text-gray-100 font-bold">
-                  {user.username}
-                </h1>
-              </div>
-              <PostsList userId={user.id} />
-            </div>
-          </div>
-        </>
-      ) : (
-        <></>
-      )}
-    </div>
-  );
+      if (error || !data) {
+        return null;
+      }
+
+      return data;
+    },
+    ["server-user", id],
+    {
+      revalidate: Math.floor(STALE_TIMES.userProfile / 1000),
+      tags: [`user-${id}`],
+    }
+  )();
+
+export const getServerUser = cache(async (id: string) => {
+  return fetchUserCached(id);
+});
+
+export async function generateMetadata(props: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await props.params;
+  const user = await getServerUser(id);
+
+  if (!user) {
+    return { title: "User Not Found | UpYarc" };
+  }
+
+  return {
+    title: `${user.username} | UpYarc`,
+    description: `Posts by ${user.username} on UpYarc`,
+  };
+}
+
+export default async function UserPage(props: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await props.params;
+  const initialUser = await getServerUser(id);
+
+  if (!initialUser) {
+    notFound();
+  }
+
+  return <UserPageClient id={id} initialUser={initialUser} />;
 }

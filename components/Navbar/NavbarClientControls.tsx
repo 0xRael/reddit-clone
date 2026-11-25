@@ -1,38 +1,36 @@
 "use client";
 
-import Image from "next/image";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-// Icons
 import { FaPlus } from "react-icons/fa6";
-import { VscBell } from "react-icons/vsc";
-import { IoSearch } from "react-icons/io5";
-import { VscSignOut } from "react-icons/vsc";
-import { IoSettingsOutline } from "react-icons/io5";
-
+import { VscBell, VscSignOut } from "react-icons/vsc";
+import { IoSearch, IoSettingsOutline } from "react-icons/io5";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { userQueryOptions } from "@/utils/queries/users";
 import { unreadNotificationsCountQueryOptions } from "@/utils/queries/notifications";
 import { signOutUser, subscribeToAuthStateChange } from "@/utils/queries/auth";
 
-const Navbar = () => {
+export function NavbarClientControls({
+  authFallback = null,
+}: {
+  authFallback?: ReactNode;
+}) {
   const queryClient = useQueryClient();
-
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   const currentUserOpts = userQueryOptions();
-  const { data: user = null } = useQuery(currentUserOpts);
+  const { data: user = null, isPending: userPending } = useQuery(currentUserOpts);
 
   const unreadOpts = unreadNotificationsCountQueryOptions(user?.id);
   const { data: unreadCount = 0 } = useQuery({
     ...unreadOpts,
     enabled: Boolean(user?.id),
   });
-
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     return subscribeToAuthStateChange(() => {
@@ -69,27 +67,7 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="w-full h-14 max-w-screen fixed flex top-0 border-gray-600 border-b-1 bg-background/60 backdrop-blur-sm p-2">
-      <Link
-        href="/"
-        className="text-xl font-bold ml-5 lg:min-w-60 max-lg:min-w-10 max-xl:ml-10"
-      >
-        <Image
-          src="/title.png"
-          width={160}
-          height={30}
-          alt="UpYarc"
-          className="-mt-2 max-lg:hidden"
-        />
-        <Image
-          src="/icon.png"
-          width={50}
-          height={50}
-          alt="UpYarc"
-          className="lg:hidden"
-        />
-      </Link>
-
+    <>
       <form
         onSubmit={handleSearch}
         className="w-full flex justify-center items-center"
@@ -107,7 +85,9 @@ const Navbar = () => {
         />
       </form>
 
-      {user?.username ? (
+      {userPending ? (
+        authFallback
+      ) : user?.username ? (
         <div className="block flex">
           <Link
             href="/submit"
@@ -182,8 +162,6 @@ const Navbar = () => {
           Login
         </Link>
       )}
-    </nav>
+    </>
   );
-};
-
-export default Navbar;
+}
