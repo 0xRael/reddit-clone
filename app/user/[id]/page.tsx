@@ -45,12 +45,24 @@ export async function generateMetadata(props: {
   const user = await getServerUser(id);
 
   if (!user) {
-    return { title: "User Not Found | UpYarc" };
+    return { title: "User Not Found", robots: { index: false } };
   }
 
+  const description = `Posts by ${user.username} on UpYarc`;
+
   return {
-    title: `${user.username} | UpYarc`,
-    description: `Posts by ${user.username} on UpYarc`,
+    title: user.username,
+    description,
+    alternates: {
+      canonical: `/user/${id}`,
+    },
+    openGraph: {
+      type: "profile",
+      title: user.username,
+      description,
+      url: `/user/${id}`,
+      username: user.username,
+    },
   };
 }
 

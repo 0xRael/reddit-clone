@@ -17,10 +17,37 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "UpYarc",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "https://upyarc.vercel.app"
+  ),
+  title: {
+    default: "UpYarc",
+    template: "%s | UpYarc",
+  },
   description: "We're Up Yet Another Reddit Clone.",
+  openGraph: {
+    siteName: "UpYarc",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
   icons: {
     icon: '/icon.png',
+  },
+};
+
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://upyarc.vercel.app";
+
+const websiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "UpYarc",
+  url: siteUrl,
+  potentialAction: {
+    "@type": "SearchAction",
+    target: `${siteUrl}/search?q={search_term_string}`,
+    "query-input": "required name=search_term_string",
   },
 };
 
@@ -34,6 +61,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
     <QueryProvider>
 		<ModalProvider>
 			<div className="h-14 w-full max-w-screen"></div>

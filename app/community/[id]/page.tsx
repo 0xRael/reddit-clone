@@ -6,6 +6,8 @@ import { createClient as createAnonClient } from "@supabase/supabase-js";
 import { CommunityPageClient } from "./CommunityPageClient";
 import { STALE_TIMES } from "@/utils/queryTimings";
 
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://upyarc.vercel.app";
+
 const fetchCommunityCached = (id: string) =>
   unstable_cache(
     async () => {
@@ -44,12 +46,26 @@ export async function generateMetadata(props: {
   const community = await getServerCommunity(id);
 
   if (!community) {
-    return { title: "Community Not Found | UpYarc" };
+    return { title: "Community Not Found", robots: { index: false } };
   }
 
+  const description =
+    community.description ?? `Posts and discussions in ${community.name}`;
+  const previewImage = community.banner_url || community.icon_url || undefined;
+
   return {
-    title: `${community.name} | UpYarc`,
-    description: community.description ?? `Posts and discussions in ${community.name}`,
+    title: community.name,
+    description,
+    alternates: {
+      canonical: `/community/${id}`,
+    },
+    openGraph: {
+      type: "website",
+      title: community.name,
+      description,
+      url: `/community/${id}`,
+      images: previewImage ? [{ url: previewImage }] : undefined,
+    },
   };
 }
 
@@ -63,5 +79,35 @@ export default async function CommunityPage(props: {
     notFound();
   }
 
-  return <CommunityPageClient id={id} initialCommunity={initialCommunity} />;
+  const previewImage =
+    initialCommunity.banner_url || initialCommunity.icon_url || undefined;
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: initialCommunity.name,
+    description:
+      initialCommunity.description ??
+      `Posts and discussions in ${initialCommunity.name}`,
+    url: `${BASE_URL}/community/${id}`,
+    dateCreated: initialCommunity.created_at ?? undefined,
+    image: previewImage ? [previewImage] : undefined,
+    isPartOf: {
+      "@type": "WebSite",
+      name: "UpYarc",
+      url: BASE_URL,
+    },
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
+        }}
+      />
+      <CommunityPageClient id={id} initialCommunity={initialCommunity} />
+    </>
+  );
 }
