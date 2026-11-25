@@ -173,9 +173,9 @@ export async function getPosts(
 
   for (const id of uniqueIds) {
     const cacheKey = `post:${field}:${id}`;
-    const cachedPost = readCache<Post | null>(cacheKey);
+    const cachedPost = readCache<{data:Post,error:string|null}>(cacheKey);
     if (cachedPost !== undefined && cachedPost !== null) {
-      postsByKey.set(String((cachedPost as Record<string, unknown>)[field] ?? cachedPost.id), cachedPost);
+      postsByKey.set(String((cachedPost.data as Record<string, unknown>)[field] ?? cachedPost.data.id), cachedPost.data);
     } else {
       missingIds.push(id);
     }

@@ -77,11 +77,11 @@ export async function getListOfUsers(
   // 1. Walk through the cache first and collect every found user
   for (const id of uniqueIds) {
     const cacheKey = `user:${field}:${id}`;
-    const cachedUser = readCache<User | null>(cacheKey);
+    const cachedUser = readCache<{data:User,error:string | null}>(cacheKey);
 
     if (cachedUser !== undefined && cachedUser !== null) {
-      const mapKey = field === "username" ? cachedUser.username : cachedUser.id;
-      usersByKey.set(mapKey, cachedUser);
+      const mapKey = field === "username" ? cachedUser.data.username : cachedUser.data.id;
+      usersByKey.set(mapKey, cachedUser.data);
     } else {
       missingIds.push(id);
     }
@@ -105,7 +105,7 @@ export async function getListOfUsers(
       // 3. Cache all fetched users individually
       for (const user of fetchedUsers) {
         const keyValue = field === "username" ? user.username : user.id;
-        writeCache(`user:${field}:${keyValue}`, user, USER_TTL_MS);
+        writeCache(`user:${field}:${keyValue}`, {data:user, error:null}, USER_TTL_MS);
         usersByKey.set(keyValue, user);
       }
     }

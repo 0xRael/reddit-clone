@@ -1,5 +1,8 @@
 import { createClient } from "@/utils/supabase/component";
 import { getAuthUserId } from "@/utils/queries/users";
+import { getCached, invalidateCacheByPrefix } from "@/utils/cache";
+
+const VOTE_TTL_MS = 30 * 1000; // 30 seconds debounce window
 
 export async function performPostVote(
   postId: string,
@@ -20,6 +23,12 @@ export async function performPostVote(
     },
     { onConflict: "user_id,post_id" }
   );
+
+  if (!error) {
+    invalidateCacheByPrefix(`user-post-vote:${userId}:${postId}`);
+    invalidateCacheByPrefix(`post:id:${postId}`);
+    invalidateCacheByPrefix("posts-query:");
+  }
 
   return { error: error ? error.message : null };
 }
@@ -44,6 +53,11 @@ export async function performReplyVote(
     { onConflict: "user_id,reply_id" }
   );
 
+  if (!error) {
+    invalidateCacheByPrefix(`user-reply-votes:${userId}:`);
+    invalidateCacheByPrefix("replies:post:");
+  }
+
   return { error: error ? error.message : null };
 }
 
@@ -54,15 +68,19 @@ export async function getUserPostVote(
   const queryId = userId ?? (await getAuthUserId());
   if (!queryId) return null;
 
-  const supabase = createClient();
-  const { data } = await supabase
-    .from("vote")
-    .select("type")
-    .eq("user_id", queryId)
-    .eq("post_id", postId)
-    .maybeSingle();
+  const cacheKey = `user-post-vote:${queryId}:${postId}`;
 
-  return data?.type ?? null;
+  return getCached(cacheKey, VOTE_TTL_MS, async () => {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("vote")
+      .select("type")
+      .eq("user_id", queryId)
+      .eq("post_id", postId)
+      .maybeSingle();
+
+    return data?.type ?? null;
+  });
 }
 
 export async function getUserReplyVotes(
@@ -72,18 +90,25 @@ export async function getUserReplyVotes(
   const queryId = userId ?? (await getAuthUserId());
   if (!queryId || replyIds.length === 0) return {};
 
-  const supabase = createClient();
-  const { data } = await supabase
-    .from("vote")
-    .select("reply_id, type")
-    .eq("user_id", queryId)
-    .in("reply_id", replyIds);
+  const sortedIds = Array.from(new Set(replyIds.filter(Boolean))).sort();
+  if (sortedIds.length === 0) return {};
 
-  const replyVoteMap: Record<string, number> = {};
-  for (const row of data ?? []) {
-    if (row.reply_id) {
-      replyVoteMap[row.reply_id] = row.type;
+  const cacheKey = `user-reply-votes:${queryId}:${sortedIds.join(",")}`;
+
+  return getCached(cacheKey, VOTE_TTL_MS, async () => {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("vote")
+      .select("reply_id, type")
+      .eq("user_id", queryId)
+      .in("reply_id", sortedIds);
+
+    const replyVoteMap: Record<string, number> = {};
+    for (const row of data ?? []) {
+      if (row.reply_id) {
+        replyVoteMap[row.reply_id] = row.type;
+      }
     }
-  }
-  return replyVoteMap;
+    return replyVoteMap;
+  });
 }
