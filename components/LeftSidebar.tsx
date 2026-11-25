@@ -1,7 +1,6 @@
 'use client'
 
 import Link from "next/link";
-import { createClient } from '@/utils/supabase/component';
 import { FaPlus } from "react-icons/fa6"
 import { FaTimes, FaBars } from "react-icons/fa"
 import { IoHomeOutline } from "react-icons/io5";
@@ -11,7 +10,7 @@ import { PiChartBarFill } from "react-icons/pi";
 import { useModal } from '@/components/ModalProvider';
 import { useState, useEffect } from 'react';
 
-import { Join, Community } from '@/types'
+import { getOwnedCommunities, getJoinedCommunities, type Community } from '@/utils/queries/communities'
 
 const SIDEBAR_ITEMS = [
 	{
@@ -63,9 +62,8 @@ const CommunityLink = ({community} : {community: {id:string|null, name:string|nu
 const LeftSidebar = ()=>{
 	const { openCommunityCreator } = useModal()
 	
-	const supabase = createClient()
 	const [isOpen, setIsOpen] = useState<boolean>(false);
-	const [joins, setJoins] = useState<Join[]>([])
+	const [joins, setJoins] = useState<Community[]>([])
   const [ownedCommunities, setOwnedCommunities] = useState<Community[]>([])
 	
 	function toggleSidebar () {
@@ -73,37 +71,16 @@ const LeftSidebar = ()=>{
 	}
 	
 	useEffect(() => {
-		const load = async () => {	
-			const { data: { user } } = await supabase.auth.getUser()
-			
-			if (!user) {
-				return
-			}		
-			
-			const { data } = await supabase
-			.from('joins')
-			.select(`
-				*,
-				communities (
-					name,
-          icon_url,
-          id
-				)
-			`)
-			.eq('user_id', user.id)
-			
-			setJoins(data ?? [])
+		const load = async () => {				
+			const { data } = await getJoinedCommunities();
+			setJoins(data)
 
-      const { data: communities } = await supabase
-      .from('communities')
-      .select('*')
-      .eq('owner_id', user.id)
-
-      setOwnedCommunities(communities ?? [])
+      const { data: communities } = await getOwnedCommunities();
+      setOwnedCommunities(communities)
 		}
 		
 		load();
-	}, [supabase])
+	}, [])
 	
 	return (
 		<>
@@ -148,7 +125,7 @@ const LeftSidebar = ()=>{
 			<h6 className="text-sm text-gray-500 mb-3 mx-2">JOINED COMMUNITIES</h6>
 			
 			{
-				joins.map((join)=>(join.communities ? <CommunityLink key={join.communities.id} community={join.communities} /> : <></>))
+				joins.map((community)=>(<CommunityLink key={community.id} community={community} />))
 			}</>}
 		</section>
 		</>

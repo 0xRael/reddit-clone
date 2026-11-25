@@ -1,7 +1,6 @@
 'use client'
 
 import Link from "next/link";
-import { createClient } from '@/utils/supabase/component';
 import PostsList from '@/components/PostsList';
 import CommunityInfo from '@/components/CommunityInfo';
 import { useState, useEffect, useRef } from 'react';
@@ -9,12 +8,11 @@ import { FaPlus } from "react-icons/fa6";
 import { LuPencil } from "react-icons/lu";
 import { SlOptions } from "react-icons/sl";
 
-import { Community, Join } from '@/types'
+import { getCommunity, hasJoinedCommunity, isCommunityOwner, leaveCommunity, joinCommunity, type Community } from '@/utils/queries/communities'
+import { uploadCommunityFile } from '@/utils/queries/storage'
 import { useModal } from '@/components/ModalProvider'
 
 export default function CommunityPage(props: { params: Promise<{ id: string }> }) {
-	const supabase = createClient()
-	
 	const [community, setCommunity] = useState<Community | null>(null)
   const { openCommunityCreator } = useModal()
 
@@ -29,74 +27,37 @@ export default function CommunityPage(props: { params: Promise<{ id: string }> }
 	useEffect(() => {
 		const load = async () => {
 			const { id } = await props.params
-			const { data: { user } } = await supabase.auth.getUser()
 
-			const { data: fetched_community } = await supabase
-				.from('communities')
-				.select('*')
-				.eq('id', id)
-				.single<Community>()
+			const { data: fetched_community } = await getCommunity(id);
 			
 			if (!fetched_community) {
         return
 			}
       setCommunity(fetched_community)
-      if(!user) {
-        return
-      }
 
-			setIsOwner(user.id === fetched_community.owner_id)
+			setIsOwner(await isCommunityOwner(fetched_community))
       
-      const { data: joinExists } = await supabase
-        .from('joins')
-        .select('*')
-        .eq('community_id', id)
-        .eq('user_id', user.id)
-        .maybeSingle<Join>()
- 
-      setHasJoined(joinExists !== null)
+      setHasJoined(await hasJoinedCommunity(fetched_community.id))
 		}
 
 		load()
-	}, [props.params, supabase])
+	}, [props.params])
 
 	const handleImageUpload = async (file: File, type: 'banner' | 'icon') => {
 		if (!community) return
-		if (file.size > 3 * 1024 * 1024) {
-			alert("Image must be under 3MB")
-			return
-		}
 
 		const setUploading = type === 'banner' ? setUploadingBanner : setUploadingIcon
 		setUploading(true)
-
-		const filePath = `${community.id}/${type}`
-
 		// Upload file to community_assets bucket
-		const { error: uploadError } = await supabase.storage
-			.from('community_assets')
-			.upload(filePath, file, { upsert: true })
+		const { url: publicUrl, error: uploadError } = await uploadCommunityFile(file, community.id, type);
 
 		if (uploadError) {
 			console.error(`Error uploading ${type}:`, uploadError)
 			alert(`Failed to upload ${type}`)
 			setUploading(false)
 			return
-		}
-
-		// 2. Get Public URL with cache-busting timestamp
-		const { data } = supabase.storage.from('community_assets').getPublicUrl(filePath)
-		const publicUrl = `${data.publicUrl}?t=${Date.now()}`
-
-		// 3. Update Communities table
-		const updatePayload = type === 'banner' ? { banner_url: publicUrl } : { icon_url: publicUrl }
-		
-		const { error: dbError } = await supabase
-			.from('communities')
-			.update(updatePayload)
-			.eq('id', community.id)
-
-		if (!dbError) {
+		} else if (!uploadError) {
+      const updatePayload = type === 'banner' ? { banner_url: publicUrl } : { icon_url: publicUrl }
 			setCommunity(prev => prev ? { ...prev, ...updatePayload } : null)
 		}
 
@@ -105,19 +66,9 @@ export default function CommunityPage(props: { params: Promise<{ id: string }> }
 	
 	const join = async () => {
 		const { id } = await props.params
-		
-		const { data: { user } } = await supabase.auth.getUser()
-		
-		if (!user) {
-			return
-		}
 	  
     if(hasJoined) {
-      const { data, error } = await supabase
-			  .from("joins")
-			  .delete()
-        .eq('user_id', user.id)
-        .eq('community_id', id)
+      const { error } = await leaveCommunity(id);
       if (error) {
 			  console.error("Error joining:", error)
         return
@@ -126,12 +77,7 @@ export default function CommunityPage(props: { params: Promise<{ id: string }> }
       return
     }
 
-		const { data, error } = await supabase
-			.from("joins")
-			.insert({
-				user_id: user.id,
-				community_id: id
-			})
+		const { error } = await joinCommunity(id);
 
     if (error) {
 			console.error("Error joining:", error)

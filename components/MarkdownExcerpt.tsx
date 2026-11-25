@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { createClient } from "@/utils/supabase/component";
 import { remarkMentions } from "@/utils/remarkMentions";
 import { remarkExtras } from "@/utils/remarkExtras";
+
+import { getListOfUsers } from '@/utils/queries/users'
 
 const UUID_MENTION_RE =
   /@\[user:([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\]/g;
@@ -87,51 +88,28 @@ export function MarkdownExcerpt({
   className = "",
   hideMediaAndCodeBlocks = true,
 }: MarkdownExcerptProps) {
-  const [usernames, setUsernames] = useState<Record<string, string>>(() => {
-    const initial: Record<string, string> = {};
-    for (const [id, name] of usernameCache.entries()) {
-      initial[id] = name;
-    }
-    return initial;
-  });
+  const [usernames, setUsernames] = useState<Record<string, string>>({});
 
-  const mentionedIds = useMemo(() => {
-    if (!content) return [];
-    const ids = new Set<string>();
+  const mentionedIds = useMemo<Set<string>>(() => {
+    const ids = new Set<string>;
+    if (!content) return ids;
     for (const match of content.matchAll(UUID_MENTION_RE)) {
       ids.add(match[1]);
     }
-    return Array.from(ids);
+    return ids;
   }, [content]);
 
   useEffect(() => {
-    const missing = mentionedIds.filter((id) => !usernameCache.has(id));
-    if (missing.length === 0) return;
-
-    let cancelled = false;
-    const supabase = createClient();
-
-    supabase
-      .from("users")
-      .select("id, username")
-      .in("id", missing)
-      .then(({ data, error }) => {
-        if (cancelled || error || !data) return;
-        for (const row of data) {
-          usernameCache.set(row.id, row.username);
-        }
+    getListOfUsers(Array.from(mentionedIds))
+      .then(({ data }) => {
         setUsernames((prev) => {
-          const next = { ...prev };
+          const next: Record<string, string> = {};
           for (const row of data) {
             next[row.id] = row.username;
           }
           return next;
         });
-      });
-
-    return () => {
-      cancelled = true;
-    };
+      })
   }, [mentionedIds]);
 
   if (!content) return null;

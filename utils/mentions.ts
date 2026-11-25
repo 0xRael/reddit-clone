@@ -1,4 +1,4 @@
-import { createClient } from "@/utils/supabase/component";
+import { getListOfUsers } from '@/utils/queries/users';
 
 // Matches @username when not preceded by a word char, @, or '[' (so @[user:id] isn't re-matched)
 const USERNAME_MENTION_RE =
@@ -18,13 +18,9 @@ export async function resolveMentionsToTokens(text: string): Promise<string> {
     return text;
   }
 
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("users")
-    .select("id, username")
-    .in("username", Array.from(foundUsernames));
+  const { data, error } = await getListOfUsers(Array.from(foundUsernames), 'username');
 
-  if (error || !data || data.length === 0) {
+  if (error || data.length === 0) {
     console.error("Failed to resolve @mentions:", error);
     return text;
   }

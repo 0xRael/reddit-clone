@@ -1,12 +1,11 @@
 'use client'
 
 import Link from "next/link";
-import { createClient } from '@/utils/supabase/component';
 import { useState, useEffect } from 'react';
 import { LuCakeSlice } from "react-icons/lu";
 import { format } from 'date-fns'
 
-import { Community } from '@/types'
+import { getCommunityAndOwner, type CommunityAndOwner } from '@/utils/queries/communities'
 import { MarkdownContent } from '@/components/MarkdownContent'
 
 type Props = {
@@ -31,28 +30,16 @@ const UserLink = ({user} : {user: {id:string|null, username:string|null}})=>{
 }
 
 const CommunityInfo = ({ communityId }: Props) => {
-	const supabase = createClient()
-	const [community, setCommunity] = useState<Community | null>(null)
+	const [community, setCommunity] = useState<CommunityAndOwner | null>(null)
 	
 	useEffect(() => {
 		const load = async () => {
-			
-			const { data: fetched_community } = await supabase
-			.from('communities')
-			.select(`
-				*,
-        owner:owner_id (
-          id, username
-        )
-			`)
-			.eq('id', communityId)
-			.single<Community>()
-			
+			const { data: fetched_community } = await getCommunityAndOwner(communityId);
 			setCommunity(fetched_community)
 		}
 		
 		load();
-	}, [supabase, communityId])
+	}, [communityId])
 	
 	if(!communityId) return;
 	
