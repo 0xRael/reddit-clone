@@ -24,6 +24,11 @@ export const metadata: Metadata = {
     default: "UpYarc",
     template: "%s | UpYarc",
   },
+  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION && {
+    verification: {
+      google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+    },
+  }),
   description: "We're Up Yet Another Reddit Clone.",
   openGraph: {
     siteName: "UpYarc",
