@@ -86,3 +86,22 @@ export async function deleteCurrentAccount(): Promise<{
   clearAllCache();
   return { error: null };
 }
+
+export async function signOutUser(): Promise<void> {
+  const supabase = createClient();
+  await supabase.auth.signOut();
+  clearAllCache();
+}
+
+export function subscribeToAuthStateChange(callback: () => void): () => void {
+  const supabase = createClient();
+  const {
+    data,
+  } = supabase.auth.onAuthStateChange(() => {
+    callback();
+  });
+
+  return () => {
+    data && data.subscription.unsubscribe();
+  };
+}
