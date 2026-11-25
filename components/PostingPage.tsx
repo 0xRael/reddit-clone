@@ -1,12 +1,12 @@
 'use client'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'  
 import { useState, useEffect, useRef } from 'react'
-import { createClient } from '@/utils/supabase/component'
 import { IoIosArrowDown } from "react-icons/io";
 
-import { Join } from '@/types'
+import { getJoinedCommunities, getOwnedCommunities, getCommunity, type Community } from '@/utils/queries/communities'
+import { getPost, updatePost, insertPost } from '@/utils/queries/posts'
+import { uploadUserFile } from '@/utils/queries/storage'
 
-import { resolveMentionsToTokens } from "@/utils/mentions";
 import { MarkdownEditor } from "@/components/MarkdownEditor"
 
 const MAX_FILE_SIZE = 3 * 1024 * 1024 // 3MB in bytes
@@ -14,7 +14,6 @@ const MAX_FILE_SIZE = 3 * 1024 * 1024 // 3MB in bytes
 export default function PostingPage() {
 	const searchParams = useSearchParams()
 	const router = useRouter()
-	const supabase = createClient()
 
 	const editId = searchParams.get('edit')
 	const isEditing = Boolean(editId)
@@ -22,9 +21,7 @@ export default function PostingPage() {
 	// Form states
 	const [title, setTitle] = useState('')
 	const [body, setBody] = useState('')
-	const [communityId, setCommunityId] = useState<string | null>(null)
-	const [communityName, setCommunityName] = useState<string | null>(null)
-	const [communityIcon, setCommunityIcon] = useState<string | null>(null)
+	const [chosenCommunity, setChosenCommunity] = useState<Community | null>(null)
 
 	const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null)
 	const [imageFile, setImageFile] = useState<File | null>(null)
@@ -32,7 +29,7 @@ export default function PostingPage() {
 	const fileInputRef = useRef<HTMLInputElement | null>(null)
   
 	// Dropdown states
-	const [joinedCommunities, setJoinedCommunities] = useState<Join[]>([])
+	const [joinedCommunities, setJoinedCommunities] = useState<Community[]>([])
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
 	// 1. Fetch initial community from URL (if any) when creating
@@ -40,74 +37,42 @@ export default function PostingPage() {
 	if (isEditing) return;
 
 	const id = searchParams.get('community')
-	setCommunityId(id)
 
 	async function fetchCommunity() {
 		if (!id) return;
-		const { data, error } = await supabase
-			.from('communities')
-			.select('name, icon_url')
-			.eq('id', id)
-			.single()
+		const { data, error } = await getCommunity(id);
+
+		setChosenCommunity(data)
 
 		if (error) {
 			console.error('Error fetching community:', error)
-		} else {
-			setCommunityName(data.name)
-			setCommunityIcon(data.icon_url)
 		}
 	}
 
 	fetchCommunity()
-	}, [isEditing, searchParams, supabase])
+	}, [isEditing, searchParams])
 
 	// 2. Fetch the list of communities the user has joined
 	useEffect(() => {
 		const loadCommunities = async () => {  
-			const { data: { user } } = await supabase.auth.getUser()
-			
-			if (!user) return;
-			
-			const { data, error } = await supabase
-				.from('joins')
-				.select(`
-					*,
-					communities (
-						name,
-						icon_url
-					)
-				`)
-				.eq('user_id', user.id)
-			
+			const { data: joined, error } = await getJoinedCommunities();
+			const { data: owned } = await getOwnedCommunities();
+
+			setJoinedCommunities([...joined, ...owned])
+
 			if (error) {
 				console.error('Error fetching joined communities:', error)
-			} else {
-				setJoinedCommunities(data ?? [])
 			}
 		}
 		
 		loadCommunities();
-	}, [supabase])
+	}, [])
 
 	// 3. Load existing post when ?edit=<id> is provided
 	useEffect(() => {
-		if (!editId) return;
-
 		async function loadPost() {
-			const { data, error } = await supabase
-				.from('posts')
-				.select(`
-					title,
-					body,
-					community_id,
-					image_url,
-					communities (
-						name,
-						icon_url
-					)
-				`)
-				.eq('id', editId)
-				.single()
+		  if (!editId) return;
+			const { data, error } = await getPost(editId);
 
 			if (error) {
 				console.error('Error loading post:', error)
@@ -115,38 +80,21 @@ export default function PostingPage() {
 				const comm = Array.isArray(data.communities) ? data.communities[0] : data.communities
 				setTitle(data.title ?? '')
 				setBody(data.body ?? '')
-				setCommunityId(data.community_id ?? null)
-				setCommunityName(comm?.name ?? null)
-				setCommunityIcon(comm?.icon_url ?? null)
+				setChosenCommunity(comm ?? null)
 				setExistingImageUrl(data.image_url ?? null)
 			}
 		}
 
 		loadPost()
-	}, [editId, supabase])
+	}, [editId])
   
   async function post() {
     setIsUploading(true)
-
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-        setIsUploading(false)
-        return;
-    }
     
     let imageUrl = existingImageUrl
 
     if (imageFile) {
-        // Grab the extension (e.g. .png) and create a unique filename using Date.now()
-        const fileExt = imageFile.name.split('.').pop()
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
-        
-        // Storing them in a folder named after the user's ID keeps the bucket organized
-        const filePath = `${user.id}/${fileName}` 
-
-        const { error: uploadError } = await supabase.storage
-            .from('post_images')
-            .upload(filePath, imageFile)
+        const { url: imageUrl, error: uploadError } = await uploadUserFile(imageFile);
             
         if (uploadError) {
             console.error("Error uploading image:", uploadError)
@@ -154,34 +102,11 @@ export default function PostingPage() {
             setIsUploading(false)
             return
         }
-        
-        // Get the public URL from the bucket
-        const { data } = supabase.storage
-            .from('post_images')
-            .getPublicUrl(filePath)
-            
-        imageUrl = data.publicUrl
-    }
-    
-    const formattedText = await resolveMentionsToTokens(body);
-
-    const payload = {
-        title: title,
-        body: formattedText,
-        user_id: user.id,
-        community_id: communityId,
-        image_url: imageUrl
     }
 
     const { error } = isEditing && editId
-        ? await supabase
-            .from("posts")
-            .update(payload)
-            .eq("id", editId)
-            .eq("user_id", user.id)
-        : await supabase
-            .from("posts")
-            .insert(payload)
+        ? await updatePost(editId, title, body, chosenCommunity?.id ?? null, imageUrl)
+        : await insertPost(title, body, chosenCommunity?.id ?? null, imageUrl)
         
     if (error) {
         console.error("An error ocurred when saving post:", error);
@@ -209,20 +134,20 @@ export default function PostingPage() {
 				onClick={() => setIsDropdownOpen(!isDropdownOpen)}
 				className="flex p-2 rounded-full bg-white/10 hover:bg-white/20 space-x-2 items-center"
 			>
-				{communityName ? (
+				{chosenCommunity ? (
 					<>
 						<div className="shrink-0">
 							<div className="bg-slate-400 rounded-full w-6 h-6 overflow-hidden flex items-center justify-center">
-								{communityIcon ? (
+								{chosenCommunity.icon_url ? (
 									<img 
-										src={communityIcon} 
-										alt={communityName ?? "Community icon"} 
+										src={chosenCommunity.icon_url} 
+										alt={chosenCommunity.name ?? "Community icon"} 
 										className="w-full h-full object-cover"
 									/>
 								) : null}
 							</div>
 						</div>
-						<span className="font-medium pr-2">{communityName}</span>
+						<span className="font-medium pr-2">{chosenCommunity.name}</span>
 					</>
 				) : (
 					<span className="font-medium px-2">Choose a community</span>
@@ -237,9 +162,7 @@ export default function PostingPage() {
 					<button
 						type="button"
 						onClick={() => {
-							setCommunityId(null);
-							setCommunityName(null);
-							setCommunityIcon(null);
+							setChosenCommunity(null);
 							setIsDropdownOpen(false);
 						}}
 						className="w-full text-left p-3 hover:bg-white/10 flex items-center space-x-3 transition-colors border-b border-gray-800"
@@ -249,30 +172,28 @@ export default function PostingPage() {
 					</button>
 
 					{/* Joined Communities List */}
-					{joinedCommunities.map((join, index) => (
+					{joinedCommunities.map((community, index) => (
 						<button
 							key={index}
 							type="button"
 							onClick={() => {
-								setCommunityId(join.community_id);
-								setCommunityName(join.communities.name);
-								setCommunityIcon(join.communities.icon_url);
+								setChosenCommunity(community);
 								setIsDropdownOpen(false);
 							}}
 							className="w-full text-left p-3 hover:bg-white/10 flex items-center space-x-3 transition-colors"
 						>
 							<div className="shrink-0">
 								<div className="bg-slate-400 rounded-full w-8 h-8 overflow-hidden flex items-center justify-center">
-									{join.communities?.icon_url ? (
+									{community.icon_url ? (
 										<img 
-											src={join.communities?.icon_url} 
-											alt={join.communities?.name ?? "Community icon"} 
+											src={community.icon_url} 
+											alt={community.name ?? "Community icon"} 
 											className="w-full h-full object-cover"
 										/>
 									) : null}
 								</div>
 							</div>
-							<span className="font-medium truncate">{join.communities.name}</span>
+							<span className="font-medium truncate">{community.name}</span>
 						</button>
 					))}
 				</div>

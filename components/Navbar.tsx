@@ -4,7 +4,6 @@ import Image from 'next/image'
 import Link from "next/link"
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from "react"
-import { createClient } from "@/utils/supabase/component"
 import { usePathname } from "next/navigation"
 // Icons
 import { FaPlus } from "react-icons/fa6"
@@ -13,12 +12,14 @@ import { IoSearch } from "react-icons/io5"
 import { VscSignOut } from "react-icons/vsc"
 import { IoSettingsOutline } from "react-icons/io5";
 
+import { createClient } from "@/utils/supabase/component"
+import { type User, getUser } from '@/utils/queries/users'
+
 const Navbar = () => {
 	const router = useRouter()
+  const supabase = createClient();
 	const [searchQuery, setSearchQuery] = useState('')
-	const supabase = createClient();
-	const [username, setUsername] = useState<string | null>(null);
-	const [userId, setUserId] = useState<string | null>(null);
+	const [user, setUser] = useState<User | null>(null);
 	const [unreadCount, setUnreadCount] = useState<number>(0);
 	const [menuOpen, setMenuOpen] = useState(false);
 	// So that we can detect outside clicks for the dropdown menu
@@ -27,26 +28,12 @@ const Navbar = () => {
 
 	useEffect(() => {
 		const loadUser = async () => {
-			// get the current session
-			const { data: { user } } = await supabase.auth.getUser()
-			if (!user) {
-				setUsername(null);
-				setUserId(null)
-				return
-			}
-			
-			setUserId(user.id);
+			const { data, error } = await getUser();
 
-			const { data, error } = await supabase
-			.from("users")
-			.select("username")
-			.eq("id", user.id)
-			.single()
+      setUser(data);
 
 			if (error) {
-				console.error("Error fetching username:", error)
-			} else {
-				setUsername(data?.username ?? user.email)
+				console.error("Error fetching user:", error)
 			}
 		}
 
@@ -85,14 +72,13 @@ const Navbar = () => {
 
 	const handleSignOut = async () => {
 		await supabase.auth.signOut()
-		setUsername(null)
-		setUserId(null)
+		setUser(null)
 		setUnreadCount(0)
 		setMenuOpen(false)
 	}
 
 	const loadUnread = async () => {
-			if (!userId){
+			if (!user){
 				setUnreadCount(0);
 				return;
 			}
@@ -100,7 +86,7 @@ const Navbar = () => {
 			const { count, error } = await supabase
 			.from("notifications")
 			.select("*", { count: "exact", head: true })
-			.eq("user_id", userId)
+			.eq("user_id", user.id)
 			.eq("read", false);
 
 			if (!error && typeof count === "number") {
@@ -110,7 +96,7 @@ const Navbar = () => {
 		
 	useEffect(() => {		
 		loadUnread();
-	}, [supabase, userId, pathname])
+	}, [supabase, user, pathname])
 
   return (
     <nav className="w-full h-14 max-w-screen fixed flex top-0 border-gray-600 border-b-1 bg-background/60 backdrop-blur-sm p-2">
@@ -140,7 +126,7 @@ const Navbar = () => {
         />
       </form>
 
-	  {username ? (
+	  {user?.username ? (
         <div className="block flex">
 		  <Link href="/submit" className="flex p-2 rounded-full hover:bg-white/20">
 			<FaPlus size={22} /> <span className="ml-3 max-sm:hidden">Create</span>
@@ -165,14 +151,14 @@ const Navbar = () => {
               onClick={() => setMenuOpen((open) => !open)}
               className="flex block px-1 rounded-full hover:bg-white/20 cursor-pointer"
             >
-              <span className="mt-2 mx-2 max-sm:hidden">{username}</span>
+              <span className="mt-2 mx-2 max-sm:hidden">{user?.username ?? ''}</span>
               <div className="bg-slate-400 rounded-full my-1 w-8 h-8"></div>
             </button>
 
             {menuOpen && (
               <div className="absolute right-0 z-20 mt-2 w-44 overflow-hidden rounded-xl border border-white/10 bg-background shadow-xl">
 				<Link
-                  href={`/user/${userId}`}
+                  href={`/user/${user?.id ?? ''}`}
                   className="flex px-4 py-2 text-sm text-white hover:bg-white/10 items-center"
                   onClick={() => setMenuOpen(false)}
                 >

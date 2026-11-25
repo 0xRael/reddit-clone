@@ -1,9 +1,7 @@
 'use client'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { createClient } from '@/utils/supabase/component'
-import { resolveMentionsToTokens } from "@/utils/mentions";
-import { Community } from '@/types'
+import { updateCommunity, insertCommunity, type Community } from '@/utils/queries/communities'
 
 import { MarkdownEditor } from "@/components/MarkdownEditor"
 
@@ -19,7 +17,6 @@ export default function CommunityCreator({ open, onClose, community, onSaved }: 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [isSaving, setIsSaving] = useState(false)
-  const supabase = createClient()
   const router = useRouter()
 
   useEffect(() => {
@@ -32,25 +29,8 @@ export default function CommunityCreator({ open, onClose, community, onSaved }: 
     if (isSaving || !name.trim()) return
     setIsSaving(true)
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      setIsSaving(false)
-      return
-    }
-
-    const formattedText = await resolveMentionsToTokens(description)
-
     if (isEditing && community) {
-      const { data, error } = await supabase
-        .from("communities")
-        .update({
-          name: name.trim(),
-          description: formattedText,
-        })
-        .eq("id", community.id)
-        .eq("owner_id", user.id)
-        .select('*')
-        .single<Community>()
+      const { data, error } = await updateCommunity(community.id, name, description);
 
       setIsSaving(false)
 
@@ -59,20 +39,13 @@ export default function CommunityCreator({ open, onClose, community, onSaved }: 
         alert("Could not update community.")
         return
       }
-
-      onSaved?.(data)
+      if(data){
+        onSaved?.(data)
+      }
       onClose()
       router.refresh()
     } else {
-      const { data, error } = await supabase
-        .from("communities")
-        .insert({
-          name: name.trim(),
-          description: formattedText,
-          owner_id: user.id
-        })
-        .select('id')
-        .single()
+      const { data, error } = await insertCommunity(name, description);
 
       setIsSaving(false)
 
@@ -82,7 +55,9 @@ export default function CommunityCreator({ open, onClose, community, onSaved }: 
       }
 
       onClose()
-      router.push(`/community/${data.id}`)
+      if(data){
+        router.push(`/community/${data.id}`)
+      }
     }
   }
 

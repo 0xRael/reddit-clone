@@ -6,10 +6,10 @@ export type Community = {
   description: string | null
   created_at: string,
   owner_id: string,
-  owner?: {
-    id: string | null,
-    username: string
-  }
+}
+
+export type CommunityAndOwner = Community & {
+  owner: User
 }
 
 export type Post = {

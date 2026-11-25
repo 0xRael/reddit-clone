@@ -1,7 +1,6 @@
 'use client'
 
 import Link from "next/link";
-import { createClient } from '@/utils/supabase/component';
 import PostsList from '@/components/PostsList';
 import CommunityInfo from '@/components/CommunityInfo';
 import { useState, useEffect, useRef } from 'react';
@@ -9,31 +8,21 @@ import { FaPlus } from "react-icons/fa6";
 import { LuPencil } from "react-icons/lu";
 import { SlOptions } from "react-icons/sl";
 
-import { User } from '@/types'
+import { getUser, type User } from '@/utils/queries/users'
 
 export default function UserPage(props: { params: Promise<{ id: string }> }) {
-	const supabase = createClient()
-	
 	const [user, setUser] = useState<User | null>(null)
 		
 	useEffect(() => {
 		const load = async () => {
 			const { id } = await props.params
-			const { data: { user } } = await supabase.auth.getUser()
 
-			const { data: fetched_user } = await supabase
-				.from('users')
-				.select('*')
-				.eq('id', id)
-				.single<User>()
-			
-			if (fetched_user) {
-				setUser(fetched_user)
-			}
+			const { data: fetched_user } = await getUser(id);
+			setUser(fetched_user)
 		}
 
 		load()
-	}, [props.params, supabase])
+	}, [props.params])
 	
 	return (
 		<div className="w-full h-full justify-center">

@@ -1,17 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/utils/supabase/component";
 import { useRecentPosts } from "@/hooks/useRecentPosts";
 import { formatDistanceToNow } from 'date-fns';
 import Link from "next/link";
 
-import { Post } from "@/types"
+import { getPosts, type Post } from '@/utils/queries/posts'
 
 const RightSection = () => {
     const { postIds, clearPosts } = useRecentPosts();
     const [posts, setPosts] = useState<Post[]>([]);
-    const supabase = createClient();
 
     useEffect(() => {
         const fetchRecentData = async () => {
@@ -20,26 +18,7 @@ const RightSection = () => {
                 return;
             }
 
-            const { data, error } = await supabase
-                .from("posts")
-                .select(`
-                    *,
-                    users (
-                        username
-                    ),
-                    communities (
-                        name,
-                        icon_url
-                    ),
-                    post_votes_view (
-                        upvotes,
-                        downvotes
-                    ),
-                    post_replies_view (
-                        count
-                    )
-                `)
-                .in("id", postIds);
+            const { data, error } = await getPosts(postIds);
 
             if (data) {
                 // Supabase doesn't guarantee order based on the .in() array, 
@@ -53,7 +32,7 @@ const RightSection = () => {
         };
 
         fetchRecentData();
-    }, [postIds, supabase]);
+    }, [postIds]);
 
     if (postIds.length === 0) return null;
 

@@ -1,63 +1,32 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { useEffect, useState } from "react"
-import { createClient } from "@/utils/supabase/component"
-import { formatDistanceToNow } from "date-fns"
-
-import { Notification } from '@/types'
-import { MarkdownExcerpt } from '@/components/MarkdownExcerpt'
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { formatDistanceToNow } from "date-fns";
+import { Notification } from "@/types";
+import { MarkdownExcerpt } from "@/components/MarkdownExcerpt";
+import {
+  getNotifications,
+  markAllNotificationsAsRead,
+} from "@/utils/queries/notifications";
 
 export default function NotificationsPage() {
-  const supabase = createClient()
-  const [notifications, setNotifications] = useState<Notification[]>([])
-
-	const markAllAsRead = async () => {
-		const { data: { user } } = await supabase.auth.getUser();
-		if (!user) return;
-		
-		await supabase.from("notifications")
-		  .update({ read: true })
-		  .eq("user_id", user.id)
-		  .eq("read", false)
-
-	}
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   useEffect(() => {
     const loadNotifications = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data, error } = await supabase
-        .from("notifications")
-        .select(`
-			id,
-			type,
-			reply_id,
-			post_id,
-			created_at,
-			read,
-			actor:actor_id ( username ),
-			reply:reply_id (
-			  id,
-			  text,
-			  post_id
-			)
-        `)
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-
+      const { data, error } = await getNotifications();
       if (error) {
-        console.error("Error fetching notifications:", error)
-      } else {
-		console.log(data);
-        setNotifications((data as unknown as Notification[]) ?? []);
-		markAllAsRead()
+        console.error("Error fetching notifications:", error);
+        return;
       }
-    }
 
-    loadNotifications()
-  }, [supabase])
+      setNotifications(data);
+      await markAllNotificationsAsRead();
+    };
+
+    loadNotifications();
+  }, []);
 
   return (
     <div className="max-w-4xl mx-auto p-6 w-full">
@@ -72,27 +41,31 @@ export default function NotificationsPage() {
             className={`p-4 w-full flex ${
               n.read ? "hover:bg-white/10" : "bg-white/20 hover:bg-white/30"
             }`}
-			href={`${window.location.origin}/post/${n.post_id}`}
+            href={`/post/${n.post_id}`}
           >
-			<div className="bg-slate-400 rounded-full w-8 h-8 mr-3"></div>
-			<div>
-				<div className="text-gray-300">
-				  <span className="font-bold">{n.actor?.username ?? "Someone"}</span>{" "}
-				  {n.type === "reply" && "replied to your post."}
-				  {n.type === "mention" && "mentioned you in a post/reply."}
-				  {n.type === "upvote" && "upvoted your post."}
-				  {/* add more types as needed */}
-				</div>
-				{n.reply && <div className="line-clamp-2 text-sm text-gray-300">
-          <MarkdownExcerpt content={n.reply.text} hideMediaAndCodeBlocks={false} />
-        </div>}
-				<div className="text-xs text-gray-400">
-				  {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
-				</div>
-			</div>
+            <div className="bg-slate-400 rounded-full w-8 h-8 mr-3"></div>
+            <div>
+              <div className="text-gray-300">
+                <span className="font-bold">{n.actor?.username ?? "Someone"}</span>{" "}
+                {n.type === "reply" && "replied to your post."}
+                {n.type === "mention" && "mentioned you in a post/reply."}
+                {n.type === "upvote" && "upvoted your post."}
+              </div>
+              {n.reply && (
+                <div className="line-clamp-2 text-sm text-gray-300">
+                  <MarkdownExcerpt
+                    content={n.reply.text}
+                    hideMediaAndCodeBlocks={false}
+                  />
+                </div>
+              )}
+              <div className="text-xs text-gray-400">
+                {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+              </div>
+            </div>
           </Link>
         ))}
       </ul>
     </div>
-  )
+  );
 }
