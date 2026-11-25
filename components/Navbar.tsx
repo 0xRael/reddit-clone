@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 // Icons
 import { FaPlus } from "react-icons/fa6";
 import { VscBell } from "react-icons/vsc";
@@ -11,32 +11,35 @@ import { IoSearch } from "react-icons/io5";
 import { VscSignOut } from "react-icons/vsc";
 import { IoSettingsOutline } from "react-icons/io5";
 
-import { type User, getUser } from "@/utils/queries/users";
-import { getUnreadNotificationsCount } from "@/utils/queries/notifications";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { userQueryOptions } from "@/utils/queries/users";
+import { unreadNotificationsCountQueryOptions } from "@/utils/queries/notifications";
 import { signOutUser, subscribeToAuthStateChange } from "@/utils/queries/auth";
 
 const Navbar = () => {
+  const queryClient = useQueryClient();
+
   const router = useRouter();
-  const pathname = usePathname();
   const [searchQuery, setSearchQuery] = useState("");
-  const [user, setUser] = useState<User | null>(null);
-  const [unreadCount, setUnreadCount] = useState<number>(0);
+
+  const currentUserOpts = userQueryOptions();
+  const { data: user = null } = useQuery(currentUserOpts);
+
+  const unreadOpts = unreadNotificationsCountQueryOptions(user?.id);
+  const { data: unreadCount = 0 } = useQuery({
+    ...unreadOpts,
+    enabled: Boolean(user?.id),
+  });
+
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
-  const loadUser = useCallback(async () => {
-    const { data, error } = await getUser();
-    setUser(data);
-
-    if (error) {
-      console.error("Error fetching user:", error);
-    }
-  }, []);
-
   useEffect(() => {
-    loadUser();
-    return subscribeToAuthStateChange(loadUser);
-  }, [loadUser]);
+    return subscribeToAuthStateChange(() => {
+      queryClient.invalidateQueries({ queryKey: currentUserOpts.queryKey });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    });
+  }, [queryClient, currentUserOpts.queryKey]);
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -60,33 +63,10 @@ const Navbar = () => {
 
   const handleSignOut = async () => {
     await signOutUser();
-    setUser(null);
-    setUnreadCount(0);
+    queryClient.setQueryData(currentUserOpts.queryKey, null);
+    queryClient.setQueryData(unreadOpts.queryKey, 0);
     setMenuOpen(false);
   };
-
-  useEffect(() => {
-    let active = true;
-
-    const loadUnread = async () => {
-      if (!user) {
-        if (active) setUnreadCount(0);
-        return;
-      }
-
-      const { count, error } = await getUnreadNotificationsCount(user.id);
-      if (!active) return;
-
-      if (!error) {
-        setUnreadCount(count);
-      }
-    };
-
-    loadUnread();
-    return () => {
-      active = false;
-    };
-  }, [user, pathname]);
 
   return (
     <nav className="w-full h-14 max-w-screen fixed flex top-0 border-gray-600 border-b-1 bg-background/60 backdrop-blur-sm p-2">
@@ -140,7 +120,6 @@ const Navbar = () => {
           <Link
             href="/notifications"
             className="relative flex p-2 rounded-full hover:bg-white/20 space-x-2"
-            onClick={() => setUnreadCount(0)}
           >
             <VscBell size={22} />
             {unreadCount > 0 && (

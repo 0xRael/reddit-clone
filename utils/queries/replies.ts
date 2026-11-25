@@ -1,17 +1,13 @@
+import { queryOptions } from "@tanstack/react-query";
 import { createClient } from "@/utils/supabase/component";
 import type { Reply } from "@/types";
 import { resolveMentionsToTokens } from "@/utils/mentions";
 import { getAuthUserId } from "@/utils/queries/users";
-import { getCached, invalidateCacheByPrefix } from "@/utils/cache";
-
-const REPLIES_TTL_MS = 20 * 1000; // 20 seconds debounce window
+import { STALE_TIMES } from "@/utils/queryTimings";
 
 export async function getPostReplies(
   postId: string
 ): Promise<{ data: Reply[]; error: string | null }> {
-  const cacheKey = `replies:post:${postId}`;
-
-  const result = await getCached(cacheKey, REPLIES_TTL_MS, async () => {
     const supabase = createClient();
 
     const { data, error } = await supabase
@@ -32,13 +28,6 @@ export async function getPostReplies(
       data: (data ?? []) as Reply[],
       error: error ? error.message : null,
     };
-  });
-
-  if (result.error) {
-    invalidateCacheByPrefix(cacheKey);
-  }
-
-  return result;
 }
 
 export async function insertReply(
@@ -61,12 +50,6 @@ export async function insertReply(
     reply_id: parentReplyId,
   });
 
-  if (!error) {
-    invalidateCacheByPrefix(`replies:post:${postId}`);
-    invalidateCacheByPrefix(`post:id:${postId}`);
-    invalidateCacheByPrefix("posts-query:");
-  }
-
   return { error: error ? error.message : null };
 }
 
@@ -88,10 +71,6 @@ export async function updateReply(
     .eq("id", replyId)
     .eq("user_id", userId);
 
-  if (!error) {
-    invalidateCacheByPrefix("replies:post:");
-  }
-
   return { error: error ? error.message : null };
 }
 
@@ -111,12 +90,21 @@ export async function deleteReply(
     .eq("id", replyId)
     .eq("user_id", userId);
 
-  if (!error) {
-    invalidateCacheByPrefix("replies:post:");
-    invalidateCacheByPrefix("posts-query:");
-  }
-
   return { error: error ? error.message : null };
 }
+
+// QUERY OPTIONS
+
+export const postRepliesQueryOptions = (postId: string | null | undefined) =>
+  queryOptions({
+    queryKey: ["replies", postId] as const,
+    enabled: Boolean(postId),
+    staleTime: STALE_TIMES.replies,
+    queryFn: async () => {
+      const { data, error } = await getPostReplies(postId!);
+      if (error) throw new Error(error);
+      return data;
+    },
+  });
 
 export type { Reply };

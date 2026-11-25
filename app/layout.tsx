@@ -4,6 +4,7 @@ import "./globals.css";
 import LeftSidebar from "@/components/LeftSidebar";
 import Navbar from "@/components/Navbar";
 import { ModalProvider } from '@/components/ModalProvider'
+import { QueryProvider } from '@/components/QueryProvider'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,6 +34,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+    <QueryProvider>
 		<ModalProvider>
 			<div className="h-14 w-full max-w-screen"></div>
 			
@@ -45,6 +47,7 @@ export default function RootLayout({
 			
 			<Navbar />
 		</ModalProvider>
+    </QueryProvider>
       </body>
     </html>
 	);

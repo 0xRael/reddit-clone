@@ -1,5 +1,7 @@
+import { queryOptions } from "@tanstack/react-query";
 import { createClient } from "@/utils/supabase/component";
-import { clearAllCache } from "@/utils/cache";
+import { getQueryClient } from "@/components/QueryProvider";
+import { STALE_TIMES } from "@/utils/queryTimings";
 
 export async function signInWithEmail(
   email: string,
@@ -83,14 +85,14 @@ export async function deleteCurrentAccount(): Promise<{
   }
 
   await supabase.auth.signOut();
-  clearAllCache();
+  getQueryClient().clear();
   return { error: null };
 }
 
 export async function signOutUser(): Promise<void> {
   const supabase = createClient();
   await supabase.auth.signOut();
-  clearAllCache();
+  getQueryClient().clear();
 }
 
 export function subscribeToAuthStateChange(callback: () => void): () => void {
@@ -105,3 +107,12 @@ export function subscribeToAuthStateChange(callback: () => void): () => void {
     data && data.subscription.unsubscribe();
   };
 }
+
+// QUERY OPTIONS
+
+export const getSessionUserQueryOptions = () =>
+  queryOptions({
+    queryKey: ["auth", "sessionUser"] as const,
+    staleTime: STALE_TIMES.authSession,
+    queryFn: getSessionUser,
+  });

@@ -1,32 +1,41 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
-import { Notification } from "@/types";
 import { MarkdownExcerpt } from "@/components/MarkdownExcerpt";
 import {
-  getNotifications,
+  notificationsQueryOptions,
+  unreadNotificationsCountQueryOptions,
   markAllNotificationsAsRead,
 } from "@/utils/queries/notifications";
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const queryClient = useQueryClient();
+  const { data: notifications = [] } = useQuery(notificationsQueryOptions());
+
+  const markReadMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await markAllNotificationsAsRead();
+      if (error) throw new Error(error);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: unreadNotificationsCountQueryOptions().queryKey,
+      });
+    },
+  });
 
   useEffect(() => {
-    const loadNotifications = async () => {
-      const { data, error } = await getNotifications();
-      if (error) {
-        console.error("Error fetching notifications:", error);
-        return;
-      }
-
-      setNotifications(data);
-      await markAllNotificationsAsRead();
-    };
-
-    loadNotifications();
-  }, []);
+    if (
+      notifications.some((n) => !n.read) &&
+      !markReadMutation.isPending &&
+      !markReadMutation.isSuccess
+    ) {
+      markReadMutation.mutate();
+    }
+  }, [notifications, markReadMutation]);
 
   return (
     <div className="max-w-4xl mx-auto p-6 w-full">
@@ -46,7 +55,9 @@ export default function NotificationsPage() {
             <div className="bg-slate-400 rounded-full w-8 h-8 mr-3"></div>
             <div>
               <div className="text-gray-300">
-                <span className="font-bold">{n.actor?.username ?? "Someone"}</span>{" "}
+                <span className="font-bold">
+                  {n.actor?.username ?? "Someone"}
+                </span>{" "}
                 {n.type === "reply" && "replied to your post."}
                 {n.type === "mention" && "mentioned you in a post/reply."}
                 {n.type === "upvote" && "upvoted your post."}
