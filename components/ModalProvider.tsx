@@ -1,8 +1,12 @@
 'use client'
 
 import { createContext, useContext, useState, ReactNode } from 'react'
-import CommunityCreator from './CommunityCreator'
+import dynamic from 'next/dynamic'
 import { Community } from '@/types'
+
+const CommunityCreator = dynamic(() => import('./CommunityCreator'), {
+  ssr: false,
+})
 
 type ModalContextType = {
   openCommunityCreator: (community?: Community, onSaved?: (updated: Community) => void) => void
@@ -35,12 +39,14 @@ export function ModalProvider({ children }: { children: ReactNode }) {
     <ModalContext.Provider value={{ openCommunityCreator, closeCommunityCreator }}>
       {children}
 
+      {isCommunityCreatorOpen && (
       <CommunityCreator
         open={isCommunityCreatorOpen}
         onClose={closeCommunityCreator}
         community={editingCommunity}
         onSaved={onSavedCallback}
       />
+      )}
     </ModalContext.Provider>
   )
 }

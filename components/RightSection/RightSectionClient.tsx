@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRecentPosts } from "@/hooks/useRecentPosts";
 import { formatDistanceToNow } from "date-fns";
@@ -8,10 +8,14 @@ import Link from "next/link";
 
 import { postsBatchQueryOptions, type Post } from "@/utils/queries/posts";
 
-const RightSection = () => {
+type Props = {
+  fallback?: ReactNode;
+};
+
+const RightSection = ({ fallback = null }: Props) => {
   const { postIds, clearPosts } = useRecentPosts();
 
-  const { data: fetchedPosts = [] } = useQuery(postsBatchQueryOptions(postIds));
+  const { data: fetchedPosts = [], isPending } = useQuery(postsBatchQueryOptions(postIds));
 
   const posts = useMemo(() => {
     if (postIds.length === 0 || fetchedPosts.length === 0) return [];
@@ -19,11 +23,12 @@ const RightSection = () => {
     return postIds.map((id) => byId.get(id)).filter(Boolean) as Post[];
   }, [postIds, fetchedPosts]);
 
-  if (postIds.length === 0) return null;
+  const showSkeleton = isPending;
+  const showEmpty = !isPending && postIds.length === 0;
 
   return (
     <section className="md:sticky max-md:hidden top-14 w-74 h-fit py-5 ml-5">
-      <div className="bg-black rounded-xl w-full py-4">
+      <div className="bg-black min-h-80 rounded-xl w-full py-4">
         <div className="flex justify-between items-center mb-3 px-4">
           <h6 className="text-[10px] font-bold text-gray-500 uppercase">
             Recent Posts
@@ -36,11 +41,16 @@ const RightSection = () => {
           </button>
         </div>
 
-        {posts.map((post) => (
+        {showEmpty && (<p className="animate-fade-in p-5">Your recently viewed posts will show up here.</p>)}
+
+        {showSkeleton
+            ? fallback
+            : posts.map((post, index) => (
           <Link
             key={post.id}
             href={`/post/${post.id}`}
-            className="block px-4 py-3 hover:bg-white/5 transition border-b border-gray-900 last:border-0"
+            style={{ animationDelay: `${Math.min(index * 50, 300)}ms` }}
+            className="animate-fade-in block px-4 py-3 hover:bg-white/5 transition border-b border-gray-900 last:border-0"
           >
             <div className="flex items-center text-[11px] text-gray-400 space-x-1 mb-2">
               <div className="shrink-0 mr-1">

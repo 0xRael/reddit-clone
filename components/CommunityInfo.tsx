@@ -33,13 +33,11 @@ const UserLink = ({
 const CommunityInfo = ({ communityId }: Props) => {
   const { data: community } = useQuery(communityAndOwnerQueryOptions(communityId));
 
-  if (!communityId) return null;
-
   return (
     <>
-      {community ? (
         <section className="md:sticky max-md:hidden top-14 w-74 h-[calc(100vh-3.5rem)] overflow-y-hidden hover:overflow-y-scroll overflow-x-hidden overscroll-contain py-5 ml-5">
-          <div className="bg-black text-gray-400 rounded-xl w-full p-5 space-y-2">
+          <div className="bg-black text-gray-400 rounded-xl w-full p-5">
+            {community && (<div className="space-y-2">
             <Link
               href={`/community/${communityId}`}
               className="text-md text-gray-400 font-bold mb-3 hover:underline"
@@ -59,11 +57,9 @@ const CommunityInfo = ({ communityId }: Props) => {
             <hr className="my-5 border-gray-700" />
             <h6 className="text-sm text-gray-500 mb-3 mx-2">OWNER</h6>
             {community.owner && <UserLink user={community.owner} />}
+            </div>)}
           </div>
         </section>
-      ) : (
-        <></>
-      )}
     </>
   );
 };

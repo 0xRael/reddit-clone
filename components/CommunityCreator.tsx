@@ -64,7 +64,7 @@ export default function CommunityCreator({ open, onClose, community, onSaved }: 
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+    <div className="animate-fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/60">
       <div className="bg-background text-white rounded-xl w-full max-w-2xl p-6 shadow-lg relative">
         <button
           type="button"

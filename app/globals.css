@@ -21,3 +21,27 @@ body {
 .bg-normal {
 	background: var(--background);
 }
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeSlideIn 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-recent-item {
+    animation: none;
+    opacity: 1;
+    grid-template-rows: 1fr;
+    transform: none;
+  }
+}
