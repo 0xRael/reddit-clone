@@ -1,140 +1,243 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import CommunityInfo from "@/components/CommunityInfo";
 import { FaRegThumbsUp, FaRegThumbsDown, FaShare } from "react-icons/fa6";
 import { FiMessageCircle, FiTrash, FiCopy } from "react-icons/fi";
 import { SlOptions } from "react-icons/sl";
 import { LuPencil } from "react-icons/lu";
 import { formatDistanceToNow } from "date-fns";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, use } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRecentPosts } from "@/hooks/useRecentPosts";
 
-import { Post, Reply } from "@/types";
+import { Reply } from "@/types";
 import { PostMedia } from "@/components/PostMedia";
 import { ReplyItem } from "@/components/ReplyItem";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
 
-import { getAuthUserId } from "@/utils/queries/users";
-import { getPost, deletePost as deletePostQuery } from "@/utils/queries/posts";
+import { authUserIdQueryOptions } from "@/utils/queries/users";
 import {
-  getPostReplies,
+  postQueryOptions,
+  deletePost as deletePostQuery,
+} from "@/utils/queries/posts";
+import {
+  postRepliesQueryOptions,
   insertReply,
   updateReply,
   deleteReply,
 } from "@/utils/queries/replies";
 import {
+  userPostVoteQueryOptions,
+  userReplyVotesQueryOptions,
   performPostVote,
   performReplyVote,
-  getUserPostVote,
-  getUserReplyVotes,
 } from "@/utils/queries/votes";
 
 export default function PostPage(props: { params: Promise<{ id: string }> }) {
-  const [postId, setPostId] = useState<string | null>(null);
-  const [post, setPost] = useState<Post | null>(null);
-  const [replies, setReplies] = useState<Reply[]>([]);
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const { id: postId } = use(props.params);
   const [comment, setComment] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [isModerator, setIsModerator] = useState(false);
   const { addPostId } = useRecentPosts();
-  const isLoadingRef = useRef(false);
-
-  const [userPostVote, setUserPostVote] = useState<number | null>(null);
-  const [userReplyVotes, setUserReplyVotes] = useState<Record<string, number>>(
-    {}
-  );
-
-  // Unwrap params once per route change
-  useEffect(() => {
-    let active = true;
-    props.params.then(({ id }) => {
-      if (active) setPostId(id);
-    });
-    return () => {
-      active = false;
-    };
-  }, [props.params]);
-
-  async function loadPost() {
-    if (!postId || isLoadingRef.current) return;
-    isLoadingRef.current = true;
-
-    try {
-      const userId = await getAuthUserId();
-      const { data: fetchedPost } = await getPost(postId);
-      const { data: replyList } = await getPostReplies(postId);
-      console.log(fetchedPost);
-      setPost(fetchedPost);
-      setReplies(replyList);
-      setCurrentUserId(userId);
-      setIsModerator(
-        Boolean(userId && userId === fetchedPost?.communities?.owner_id)
-      );
-
-      if (!userId) {
-        setUserPostVote(null);
-        setUserReplyVotes({});
-        return;
-      }
-
-      const replyIds = replyList.map((r) => r.id);
-      const postVote = await getUserPostVote(postId, userId);
-      const replyVoteMap = await getUserReplyVotes(replyIds, userId);
-
-      setUserPostVote(postVote);
-      setUserReplyVotes(replyVoteMap);
-    } finally {
-      isLoadingRef.current = false;
-    }
-  };
-
 
   useEffect(() => {
-    console.log(`postId: ${postId}`)
     if (postId) {
       addPostId(postId);
-      loadPost()
     }
   }, [postId]);
 
+  const { data: currentUserId = null } = useQuery(authUserIdQueryOptions());
+  const { data: post = null } = useQuery(postQueryOptions(postId));
+  const { data: replies = [] } = useQuery(postRepliesQueryOptions(postId));
 
-  const votePost = async (voteType: number) => {
-    if (!currentUserId || !post) return;
+  const isModerator = Boolean(
+    currentUserId &&
+      post?.communities?.owner_id &&
+      currentUserId === post.communities.owner_id
+  );
 
-    setUserPostVote(voteType);
-    const { error } = await performPostVote(post.id, voteType);
-    if (error) {
+  const postVoteOpts = userPostVoteQueryOptions(postId, currentUserId);
+  const { data: userPostVote = null } = useQuery({
+    ...postVoteOpts,
+    enabled: Boolean(currentUserId && postId),
+  });
+
+  const replyIds = replies.map((r) => r.id);
+  const replyVotesOpts = userReplyVotesQueryOptions(replyIds, currentUserId);
+  const { data: userReplyVotes = {} } = useQuery({
+    ...replyVotesOpts,
+    enabled: Boolean(currentUserId && replyIds.length > 0),
+  });
+
+  const postVoteMutation = useMutation({
+    mutationFn: async (voteType: number) => {
+      if (!currentUserId || !post) throw new Error("Missing user or post");
+      const { error } = await performPostVote(post.id, voteType);
+      if (error) throw new Error(error);
+    },
+    onMutate: (voteType) => {
+      queryClient.setQueryData(postVoteOpts.queryKey, voteType);
+    },
+    onSuccess: () => {
+      if (!post) return;
+      queryClient.invalidateQueries({ queryKey: postVoteOpts.queryKey });
+      queryClient.invalidateQueries({
+        queryKey: postQueryOptions(post.id).queryKey,
+      });
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
+    },
+    onError: (error) => {
       console.error("Error voting:", error);
-    }
-  };
+      queryClient.invalidateQueries({ queryKey: postVoteOpts.queryKey });
+    },
+  });
 
-  const handleDeletePost = async () => {
-    if (!post) return;
-    const { error } = await deletePostQuery(post.id, post.image_url);
-
-    if (error) {
+  const deletePostMutation = useMutation({
+    mutationFn: async () => {
+      if (!post) throw new Error("Missing post");
+      const { error } = await deletePostQuery(post.id, post.image_url);
+      if (error) throw new Error(error);
+      return post.id;
+    },
+    onSuccess: (deletedId) => {
+      queryClient.removeQueries({
+        queryKey: postQueryOptions(deletedId).queryKey,
+      });
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
+      alert("Post deleted");
+      router.push("/");
+    },
+    onError: (error) => {
       console.error("Failed to delete post row:", error);
       alert("Could not delete post.");
-    } else {
-      alert("Post deleted");
-    }
+    },
+  });
+
+  const replyVoteMutation = useMutation({
+    mutationFn: async ({
+      replyId,
+      voteType,
+    }: {
+      replyId: string;
+      voteType: number;
+    }) => {
+      if (!currentUserId || !replyId) throw new Error("Missing user or reply");
+      const { error } = await performReplyVote(replyId, voteType);
+      if (error) throw new Error(error);
+    },
+    onMutate: ({ replyId, voteType }) => {
+      queryClient.setQueryData<Record<string, number>>(
+        replyVotesOpts.queryKey,
+        (prev = {}) => ({
+          ...prev,
+          [replyId]: voteType,
+        })
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: replyVotesOpts.queryKey });
+      queryClient.invalidateQueries({
+        queryKey: postRepliesQueryOptions(postId).queryKey,
+      });
+    },
+    onError: (error) => {
+      console.error("Error voting:", error);
+      queryClient.invalidateQueries({ queryKey: replyVotesOpts.queryKey });
+    },
+  });
+
+  const createReplyMutation = useMutation({
+    mutationFn: async ({
+      textToPost,
+      parentReplyId,
+    }: {
+      textToPost: string;
+      parentReplyId: string | null;
+    }) => {
+      if (!currentUserId || !post || !textToPost) {
+        throw new Error("Cannot post empty reply");
+      }
+      const { error } = await insertReply(post.id, textToPost, parentReplyId);
+      if (error) throw new Error(error);
+      return parentReplyId;
+    },
+    onSuccess: (parentReplyId) => {
+      if (!parentReplyId) {
+        setComment("");
+      }
+      queryClient.invalidateQueries({
+        queryKey: postRepliesQueryOptions(postId).queryKey,
+      });
+      queryClient.invalidateQueries({
+        queryKey: postQueryOptions(postId).queryKey,
+      });
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
+    },
+    onError: (error) => {
+      console.error("An error occurred when commenting:", error);
+    },
+  });
+
+  const editReplyMutation = useMutation({
+    mutationFn: async ({
+      replyId,
+      newText,
+    }: {
+      replyId: string;
+      newText: string;
+    }) => {
+      const { error } = await updateReply(replyId, newText);
+      if (error) throw new Error(error);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: postRepliesQueryOptions(postId).queryKey,
+      });
+    },
+    onError: (error) => {
+      console.error("Failed to update reply:", error);
+      alert("Could not save reply changes.");
+    },
+  });
+
+  const deleteReplyMutation = useMutation({
+    mutationFn: async (replyId: string) => {
+      const { error } = await deleteReply(replyId);
+      if (error) throw new Error(error);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: postRepliesQueryOptions(postId).queryKey,
+      });
+      queryClient.invalidateQueries({
+        queryKey: postQueryOptions(postId).queryKey,
+      });
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
+      alert("Reply deleted succesfully.");
+    },
+    onError: (error) => {
+      console.error("Failed to delete reply:", error);
+      alert("Could not delete reply changes.");
+    },
+  });
+
+  const votePost = (voteType: number) => {
+    if (!currentUserId || !post || postVoteMutation.isPending) return;
+    postVoteMutation.mutate(voteType);
   };
 
-  const voteReply = async (replyId: string, voteType: number) => {
+  const handleDeletePost = () => {
+    if (!post || deletePostMutation.isPending) return;
+    deletePostMutation.mutate();
+  };
+
+  const voteReply = (replyId: string, voteType: number) => {
     if (!currentUserId || !replyId) return;
-
-    setUserReplyVotes((prev) => ({
-      ...prev,
-      [replyId]: voteType,
-    }));
-
-    const { error } = await performReplyVote(replyId, voteType);
-    if (error) {
-      console.error("Error voting:", error);
-    }
+    replyVoteMutation.mutate({ replyId, voteType });
   };
 
   function buildReplyTree(flatReplies: Reply[]): Reply[] {
@@ -162,35 +265,15 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
     parentReplyId: string | null = null
   ) {
     if (!currentUserId || !post || !textToPost) return;
-
-    const { error } = await insertReply(post.id, textToPost, parentReplyId);
-
-    if (error) {
-      console.error("An error occurred when commenting:", error);
-    } else {
-      if (!parentReplyId) {
-        setComment("");
-      }
-      loadPost();
-    }
+    await createReplyMutation.mutateAsync({ textToPost, parentReplyId });
   }
 
   async function handleEditReply(replyId: string, newText: string) {
-    const { error } = await updateReply(replyId, newText);
-    if (error) {
-      console.error("Failed to update reply:", error);
-      alert("Could not save reply changes.");
-    }
+    await editReplyMutation.mutateAsync({ replyId, newText });
   }
 
   async function handleDeleteReply(replyId: string) {
-    const { error } = await deleteReply(replyId);
-    if (error) {
-      console.error("Failed to delete reply:", error);
-      alert("Could not delete reply changes.");
-    } else {
-      alert("Reply deleted succesfully.");
-    }
+    await deleteReplyMutation.mutateAsync(replyId);
   }
 
   function copyLink(idToCopy: string) {
@@ -240,7 +323,7 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
                   href={`/user/${post?.user_id}`}
                   className="mr-2 hover:underline"
                 >
-                  {post?.users.username}
+                  {post?.users?.username}
                 </a>
                 <div className="text-gray-400">•</div>
                 <div className="text-gray-400">
@@ -364,9 +447,10 @@ export default function PostPage(props: { params: Promise<{ id: string }> }) {
               <div className="flex justify-end gap-2">
                 <button
                   type="submit"
+                  disabled={createReplyMutation.isPending}
                   className="rounded-full bg-white/15 px-3.5 py-1 text-xs font-medium hover:bg-white/25 disabled:opacity-40"
                 >
-                  Comment
+                  {createReplyMutation.isPending ? "Posting..." : "Comment"}
                 </button>
               </div>
             </form>

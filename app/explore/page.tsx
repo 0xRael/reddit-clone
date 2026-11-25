@@ -1,20 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
-import { Community } from "@/types";
 import { MarkdownExcerpt } from "@/components/MarkdownExcerpt";
-import { getAllCommunities } from "@/utils/queries/communities";
+import { allCommunitiesQueryOptions } from "@/utils/queries/communities";
 
 export default function Explore() {
-  const [communities, setCommunities] = useState<Community[]>([]);
-
-  useEffect(() => {
-    getAllCommunities().then(({ data }) => {
-      setCommunities(data);
-    });
-  }, []);
+  const { data: communities = [] } = useQuery(allCommunitiesQueryOptions());
 
   return (
     <div className="w-full h-full py-5 justify-center items-center flex flex-col relative">

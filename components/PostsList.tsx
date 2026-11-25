@@ -3,14 +3,16 @@
 import Link from "next/link";
 import { FaRegThumbsUp, FaRegThumbsDown, FaShare } from "react-icons/fa6";
 import { FiMessageCircle } from "react-icons/fi";
-import { useEffect, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { Post } from "@/types";
 import { PostMedia } from "@/components/PostMedia";
 import { MarkdownExcerpt } from "@/components/MarkdownExcerpt";
 import { performPostVote } from "@/utils/queries/votes";
-import { queryPosts } from "@/utils/queries/posts";
+import {
+  postQueryOptions,
+  postsFeedQueryOptions,
+} from "@/utils/queries/posts";
 
 type Props = {
   communityId?: string | null;
@@ -19,23 +21,42 @@ type Props = {
 };
 
 const PostsList = ({ communityId, userId, searchQuery }: Props) => {
-  const [posts, setPosts] = useState<Post[]>([]);
+  const queryClient = useQueryClient();
+  const normalizedSearch = searchQuery?.trim() ?? "";
 
-  useEffect(() => {
-    queryPosts({ communityId, userId, searchQuery }).then(({ data, error }) => {
-      if (error) {
-        console.error("Error fetching posts:", error);
-      } else {
-        setPosts(data);
-      }
-    });
-  }, [communityId, userId, searchQuery]);
+  const { data: posts = [] } = useQuery(
+    postsFeedQueryOptions({
+      communityId,
+      userId,
+      searchQuery: normalizedSearch || null,
+    })
+  );
 
-  const votePost = async (postId: string, voteType: number) => {
-    const { error } = await performPostVote(postId, voteType);
-    if (error) {
+  const voteMutation = useMutation({
+    mutationFn: async ({
+      postId,
+      voteType,
+    }: {
+      postId: string;
+      voteType: number;
+    }) => {
+      const { error } = await performPostVote(postId, voteType);
+      if (error) throw new Error(error);
+      return postId;
+    },
+    onSuccess: (postId) => {
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
+      queryClient.invalidateQueries({
+        queryKey: postQueryOptions(postId).queryKey,
+      });
+    },
+    onError: (error) => {
       console.error("Error voting:", error);
-    }
+    },
+  });
+
+  const votePost = (postId: string, voteType: number) => {
+    voteMutation.mutate({ postId, voteType });
   };
 
   function copyLink(postId: string) {

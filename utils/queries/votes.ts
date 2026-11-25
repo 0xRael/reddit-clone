@@ -1,8 +1,7 @@
+import { queryOptions } from "@tanstack/react-query";
 import { createClient } from "@/utils/supabase/component";
 import { getAuthUserId } from "@/utils/queries/users";
-import { getCached, invalidateCacheByPrefix } from "@/utils/cache";
-
-const VOTE_TTL_MS = 30 * 1000; // 30 seconds debounce window
+import { STALE_TIMES } from "@/utils/queryTimings";
 
 export async function performPostVote(
   postId: string,
@@ -23,12 +22,6 @@ export async function performPostVote(
     },
     { onConflict: "user_id,post_id" }
   );
-
-  if (!error) {
-    invalidateCacheByPrefix(`user-post-vote:${userId}:${postId}`);
-    invalidateCacheByPrefix(`post:id:${postId}`);
-    invalidateCacheByPrefix("posts-query:");
-  }
 
   return { error: error ? error.message : null };
 }
@@ -53,11 +46,6 @@ export async function performReplyVote(
     { onConflict: "user_id,reply_id" }
   );
 
-  if (!error) {
-    invalidateCacheByPrefix(`user-reply-votes:${userId}:`);
-    invalidateCacheByPrefix("replies:post:");
-  }
-
   return { error: error ? error.message : null };
 }
 
@@ -68,9 +56,6 @@ export async function getUserPostVote(
   const queryId = userId ?? (await getAuthUserId());
   if (!queryId) return null;
 
-  const cacheKey = `user-post-vote:${queryId}:${postId}`;
-
-  return getCached(cacheKey, VOTE_TTL_MS, async () => {
     const supabase = createClient();
     const { data } = await supabase
       .from("vote")
@@ -80,7 +65,6 @@ export async function getUserPostVote(
       .maybeSingle();
 
     return data?.type ?? null;
-  });
 }
 
 export async function getUserReplyVotes(
@@ -93,9 +77,6 @@ export async function getUserReplyVotes(
   const sortedIds = Array.from(new Set(replyIds.filter(Boolean))).sort();
   if (sortedIds.length === 0) return {};
 
-  const cacheKey = `user-reply-votes:${queryId}:${sortedIds.join(",")}`;
-
-  return getCached(cacheKey, VOTE_TTL_MS, async () => {
     const supabase = createClient();
     const { data } = await supabase
       .from("vote")
@@ -110,5 +91,31 @@ export async function getUserReplyVotes(
       }
     }
     return replyVoteMap;
-  });
 }
+
+// QUERY OPTIONS
+
+export const userPostVoteQueryOptions = (
+  postId: string | null | undefined,
+  userId?: string | null
+) =>
+  queryOptions({
+    queryKey: ["votes", "post", userId ?? "current", postId] as const,
+    enabled: Boolean(postId),
+    staleTime: STALE_TIMES.votes,
+    queryFn: () => getUserPostVote(postId!, userId),
+  });
+
+export const userReplyVotesQueryOptions = (
+  replyIds: readonly string[],
+  userId?: string | null
+) => {
+  const sortedIds = Array.from(new Set(replyIds.filter(Boolean))).sort();
+
+  return queryOptions({
+    queryKey: ["votes", "replies", userId ?? "current", sortedIds] as const,
+    enabled: sortedIds.length > 0,
+    staleTime: STALE_TIMES.votes,
+    queryFn: () => getUserReplyVotes(sortedIds, userId),
+  });
+};

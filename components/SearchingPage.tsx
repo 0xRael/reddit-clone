@@ -3,20 +3,16 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import PostsList from "@/components/PostsList";
-import { useEffect, useState } from "react";
-import { Community } from "@/types";
-import { searchCommunities } from "@/utils/queries/communities";
+import { useQuery } from "@tanstack/react-query";
+import { searchCommunitiesQueryOptions } from "@/utils/queries/communities";
 
 export default function SearchingPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get("q") ?? "";
-  const [communities, setCommunities] = useState<Community[]>([]);
 
-  useEffect(() => {
-    searchCommunities(query).then(({ data }) => {
-      setCommunities(data);
-    });
-  }, [query]);
+  const { data: communities = [] } = useQuery(
+    searchCommunitiesQueryOptions(query)
+  );
 
   return (
     <div className="w-full h-full justify-center">

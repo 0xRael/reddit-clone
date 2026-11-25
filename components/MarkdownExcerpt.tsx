@@ -6,13 +6,11 @@ import remarkGfm from "remark-gfm";
 import { remarkMentions } from "@/utils/remarkMentions";
 import { remarkExtras } from "@/utils/remarkExtras";
 
-import { getListOfUsers } from '@/utils/queries/users'
+import { useQuery } from "@tanstack/react-query";
+import { usersListQueryOptions } from "@/utils/queries/users";
 
 const UUID_MENTION_RE =
   /@\[user:([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\]/g;
-
-// Shared module cache so PostList and Notification don't re-fetch known users
-const usernameCache = new Map<string, string>();
 
 function extractText(node: React.ReactNode): string {
   if (typeof node === "string" || typeof node === "number") {
@@ -88,29 +86,28 @@ export function MarkdownExcerpt({
   className = "",
   hideMediaAndCodeBlocks = true,
 }: MarkdownExcerptProps) {
-  const [usernames, setUsernames] = useState<Record<string, string>>({});
-
-  const mentionedIds = useMemo<Set<string>>(() => {
-    const ids = new Set<string>;
-    if (!content) return ids;
+  const mentionedIdsList = useMemo(() => {
+    if (!content) return [];
+    const ids = new Set<string>();
     for (const match of content.matchAll(UUID_MENTION_RE)) {
       ids.add(match[1]);
     }
-    return ids;
+    return Array.from(ids).sort();
   }, [content]);
 
-  useEffect(() => {
-    getListOfUsers(Array.from(mentionedIds))
-      .then(({ data }) => {
-        setUsernames((prev) => {
-          const next: Record<string, string> = {};
-          for (const row of data) {
-            next[row.id] = row.username;
-          }
-          return next;
-        });
-      })
-  }, [mentionedIds]);
+  const { data: mentionedUsers = [] } = useQuery(
+    usersListQueryOptions(mentionedIdsList)
+  );
+
+  const usernames = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const row of mentionedUsers) {
+      if (row.username) {
+        map[row.id] = row.username;
+      }
+    }
+    return map;
+  }, [mentionedUsers]);
 
   if (!content) return null;
 

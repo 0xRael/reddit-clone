@@ -1,9 +1,8 @@
+import { queryOptions } from "@tanstack/react-query";
 import { createClient } from "@/utils/supabase/component";
 import type { Notification } from "@/types";
 import { getAuthUserId } from "@/utils/queries/users";
-import { getCached, invalidateCacheByPrefix } from '@/utils/cache'
-
-const NOTIFICATIONS_TTL_MS = 20 * 1000;
+import { STALE_TIMES } from "@/utils/queryTimings";
 
 export async function getNotifications(): Promise<{
   data: Notification[];
@@ -55,10 +54,6 @@ export async function markAllNotificationsAsRead(): Promise<{
     .eq("user_id", userId)
     .eq("read", false);
 
-  if (!error) {
-    invalidateCacheByPrefix(`notifications:`);
-  }
-
   return { error: error ? error.message : null };
 }
 
@@ -70,9 +65,6 @@ export async function getUnreadNotificationsCount(
     return { count: 0, error: null };
   }
 
-  const cacheKey = `notifications:unread`;
-
-  const result = await getCached(cacheKey, NOTIFICATIONS_TTL_MS, async () => {
     const supabase = createClient();
     const { count, error } = await supabase
       .from("notifications")
@@ -84,11 +76,30 @@ export async function getUnreadNotificationsCount(
       count: typeof count === "number" ? count : 0,
       error: error ? error.message : null,
     };
+}
+
+// QUERY OPTIONS
+
+export const notificationsQueryOptions = () =>
+  queryOptions({
+    queryKey: ["notifications", "list"] as const,
+    staleTime: STALE_TIMES.notifications,
+    queryFn: async () => {
+      const { data, error } = await getNotifications();
+      if (error) throw new Error(error);
+      return data;
+    },
   });
 
-  if (result.error) {
-    invalidateCacheByPrefix(cacheKey);
-  }
-
-  return result;
-}
+export const unreadNotificationsCountQueryOptions = (
+  targetUserId?: string | null
+) =>
+  queryOptions({
+    queryKey: ["notifications", "unread", targetUserId ?? "current"] as const,
+    staleTime: STALE_TIMES.notifications,
+    queryFn: async () => {
+      const { count, error } = await getUnreadNotificationsCount(targetUserId);
+      if (error) throw new Error(error);
+      return count;
+    },
+  });

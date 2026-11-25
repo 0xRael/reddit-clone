@@ -1,8 +1,8 @@
+import { queryOptions } from "@tanstack/react-query";
 import { createClient } from "@/utils/supabase/component";
 import type { User } from "@/types";
-import { getCached, invalidateCacheByPrefix, readCache, writeCache } from "@/utils/cache";
-
-const USER_TTL_MS = 30 * 60 * 1000; // 5 minutes
+import { getQueryClient } from "@/components/QueryProvider";
+import { STALE_TIMES } from "@/utils/queryTimings";
 
 export async function getAuthUserId(): Promise<string | null> {
   const supabase = createClient();
@@ -11,10 +11,7 @@ export async function getAuthUserId(): Promise<string | null> {
     error,
   } = await supabase.auth.getSession();
 
-  if (error) {
-    return null;
-  }
-
+  if (error) return null;
   return session?.user?.id ?? null;
 }
 
@@ -35,59 +32,46 @@ export async function getUser(
   }
 
   const field = match ?? "id";
-  const cacheKey = `user:${field}:${queryId}`;
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .eq(field, queryId)
+    .maybeSingle<User>();
 
-  const result = await getCached(cacheKey, USER_TTL_MS, async () => {
-    const { data, error } = await supabase
-      .from("users")
-      .select("*")
-      .eq(field, queryId)
-      .maybeSingle<User>();
-
-    return {
-      data,
-      error: error ? error.message : null,
-    };
-  });
-
-  if (result.error) {
-    invalidateCacheByPrefix(cacheKey);
-  }
-
-  return result;
+  return {
+    data,
+    error: error ? error.message : null,
+  };
 }
 
 export async function getListOfUsers(
   userIds: string[],
   match?: string
 ): Promise<{ data: User[]; error: string | null }> {
-  if (userIds.length === 0) {
-    return { data: [], error: null };
-  }
+  if (userIds.length === 0) return { data: [], error: null };
 
   const field = match ?? "id";
   const uniqueIds = Array.from(new Set(userIds.filter(Boolean)));
-  if (uniqueIds.length === 0) {
-    return { data: [], error: null };
-  }
+  if (uniqueIds.length === 0) return { data: [], error: null };
 
+  const queryClient = getQueryClient();
   const usersByKey = new Map<string, User>();
   const missingIds: string[] = [];
 
-  // 1. Walk through the cache first and collect every found user
   for (const id of uniqueIds) {
-    const cacheKey = `user:${field}:${id}`;
-    const cachedUser = readCache<{data:User,error:string | null}>(cacheKey);
-
-    if (cachedUser !== undefined && cachedUser !== null) {
-      const mapKey = field === "username" ? cachedUser.data.username : cachedUser.data.id;
-      usersByKey.set(mapKey, cachedUser.data);
+    const cached = queryClient.getQueryData<User | null | undefined>([
+      "user",
+      field,
+      id,
+    ]);
+    if (cached !== null && cached !== undefined) {
+      const mapKey = field === "username" ? cached.username : cached.id;
+      usersByKey.set(mapKey, cached);
     } else {
       missingIds.push(id);
     }
   }
 
-  // 2. Query only the missing users in a single batch query
   let queryError: string | null = null;
 
   if (missingIds.length > 0) {
@@ -100,30 +84,21 @@ export async function getListOfUsers(
     if (error) {
       queryError = error.message;
     } else {
-      const fetchedUsers = (data ?? []) as User[];
-
-      // 3. Cache all fetched users individually
-      for (const user of fetchedUsers) {
+      for (const user of (data ?? []) as User[]) {
         const keyValue = field === "username" ? user.username : user.id;
-        writeCache(`user:${field}:${keyValue}`, {data:user, error:null}, USER_TTL_MS);
+        queryClient.setQueryData(["user", field, keyValue], user);
         usersByKey.set(keyValue, user);
       }
     }
   }
 
-  // Preserve requested order
   const orderedUsers: User[] = [];
   for (const id of uniqueIds) {
     const found = usersByKey.get(id);
-    if (found) {
-      orderedUsers.push(found);
-    }
+    if (found) orderedUsers.push(found);
   }
 
-  return {
-    data: orderedUsers,
-    error: queryError,
-  };
+  return { data: orderedUsers, error: queryError };
 }
 
 export async function updateUsername(
@@ -138,11 +113,58 @@ export async function updateUsername(
     .update({ username: username.trim() })
     .eq("id", userId);
 
-  if (!error) {
-    invalidateCacheByPrefix(`user:id:${userId}`);
-  }
-
   return { error: error ? error.message : null };
 }
+
+// QUERY OPTIONS
+
+export const authUserIdQueryOptions = () =>
+  queryOptions({
+    queryKey: ["auth", "userId"] as const,
+    staleTime: STALE_TIMES.authSession,
+    queryFn: getAuthUserId,
+  });
+
+export const isAuthenticatedQueryOptions = () =>
+  queryOptions({
+    queryKey: ["auth", "isAuthenticated"] as const,
+    staleTime: STALE_TIMES.authSession,
+    queryFn: isAuthenticated,
+  });
+
+export const userQueryOptions = (
+  userId?: string | null,
+  match?: string
+) => {
+  const field = match ?? "id";
+  return queryOptions({
+    queryKey: ["user", field, userId ?? "current"] as const,
+    staleTime: STALE_TIMES.userProfile,
+    queryFn: async () => {
+      const { data, error } = await getUser(userId, field);
+      if (error) throw new Error(error);
+      return data;
+    },
+  });
+};
+
+export const usersListQueryOptions = (
+  userIds: readonly string[],
+  match?: string
+) => {
+  const field = match ?? "id";
+  const sortedIds = Array.from(new Set(userIds.filter(Boolean))).sort();
+
+  return queryOptions({
+    queryKey: ["users", "list", field, sortedIds] as const,
+    enabled: sortedIds.length > 0,
+    staleTime: STALE_TIMES.userBatch,
+    queryFn: async () => {
+      const { data, error } = await getListOfUsers(sortedIds, field);
+      if (error) throw new Error(error);
+      return data;
+    },
+  });
+};
 
 export type { User };

@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import FieldEditorModal from "@/components/FieldEditorModal";
 import ConfirmModal from "@/components/ConfirmModal";
 import { IoIosArrowForward } from "react-icons/io";
-import { getUser, updateUsername } from "@/utils/queries/users";
+import { getSessionUserQueryOptions } from "@/utils/queries/auth";
+import { userQueryOptions, updateUsername } from "@/utils/queries/users";
 import {
-  getSessionUser,
   updateAuthEmail,
   deleteCurrentAccount,
 } from "@/utils/queries/auth";
@@ -15,37 +16,66 @@ import {
 type SettingsField = "username" | "email" | null;
 
 export default function SettingsPage() {
+  const queryClient = useQueryClient();
   const router = useRouter();
-  const [username, setUsername] = useState<string | null>(null);
-  const [email, setEmail] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [activeField, setActiveField] = useState<SettingsField>(null);
 
-  useEffect(() => {
-    const loadUser = async () => {
-      const sessionUser = await getSessionUser();
-      if (!sessionUser) {
-        setUsername(null);
-        setEmail(null);
-        setUserId(null);
-        return;
-      }
+  const sessionUserOpts = getSessionUserQueryOptions();
+  const { data: sessionUser = null } = useQuery(sessionUserOpts);
 
-      setUserId(sessionUser.id);
-      setEmail(sessionUser.email);
+  const userId = sessionUser?.id ?? null;
+  const email = sessionUser?.email ?? null;
 
-      const { data, error } = await getUser(sessionUser.id);
-      if (error) {
-        console.error("Error fetching username:", error);
+  const profileOpts = userQueryOptions(userId);
+  const { data: profileUser = null } = useQuery({
+    ...profileOpts,
+    enabled: Boolean(userId),
+  });
+
+  const username = profileUser?.username ?? email ?? null;
+
+  const saveFieldMutation = useMutation({
+    mutationFn: async ({
+      field,
+      value,
+    }: {
+      field: Exclude<SettingsField, null>;
+      value: string;
+    }) => {
+      if (!userId) throw new Error("Not authenticated");
+      if (field === "username") {
+        const { error } = await updateUsername(value);
+        if (error) throw new Error(error);
       } else {
-        setUsername(data?.username ?? sessionUser.email ?? null);
+        const { error } = await updateAuthEmail(value);
+        if (error) throw new Error(error);
       }
-    };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: sessionUserOpts.queryKey });
+      queryClient.invalidateQueries({ queryKey: ["user"] });
+      closeFieldEditor();
+    },
+    onError: (err) => {
+      console.error("Failed to update setting:", err);
+    },
+  });
 
-    loadUser();
-  }, []);
+  const deleteAccountMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await deleteCurrentAccount();
+      if (error) throw new Error(error);
+    },
+    onSuccess: () => {
+      queryClient.clear();
+      router.push("/login");
+    },
+    onError: (err) => {
+      console.error(err);
+    },
+  });
 
   const openFieldEditor = (field: SettingsField) => {
     setActiveField(field);
@@ -58,35 +88,14 @@ export default function SettingsPage() {
   };
 
   const handleFieldSave = async (value: string) => {
-    if (!userId) return;
-
-    if (activeField === "username") {
-      const { error } = await updateUsername(value);
-      if (error) {
-        console.error("Failed to update username:", error);
-      } else {
-        setUsername(value.trim());
-      }
-    } else if (activeField === "email") {
-      const { error } = await updateAuthEmail(value);
-      if (error) {
-        console.error("Failed to update email:", error);
-      } else {
-        setEmail(value);
-      }
-    }
-
-    closeFieldEditor();
+    if (!userId || !activeField || saveFieldMutation.isPending) return;
+    await saveFieldMutation.mutateAsync({ field: activeField, value });
   };
 
   const handleDeleteAccount = async () => {
+    if (deleteAccountMutation.isPending) return;
     setIsDeleteConfirmOpen(false);
-    const { error } = await deleteCurrentAccount();
-    if (error) {
-      console.error(error);
-      return;
-    }
-    router.push("/login");
+    await deleteAccountMutation.mutateAsync();
   };
 
   const editorTitle =

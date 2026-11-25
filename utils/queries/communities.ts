@@ -1,11 +1,9 @@
+import { queryOptions } from "@tanstack/react-query";
 import { createClient } from "@/utils/supabase/component";
 import type { Community, CommunityAndOwner } from "@/types";
 import { getAuthUserId } from "./users";
 import { resolveMentionsToTokens } from "@/utils/mentions";
-import { getCached, invalidateCacheByPrefix } from "@/utils/cache";
-
-const COMMUNITY_TTL_MS = 20 * 60 * 1000; // 20 minutes
-const MEMBERSHIP_TTL_MS = 30 * 60 * 1000; // 30 minutes
+import { STALE_TIMES } from "@/utils/queryTimings";
 
 export async function updateCommunity(
   id: string,
@@ -32,13 +30,6 @@ export async function updateCommunity(
     .eq("owner_id", userId)
     .select("*")
     .single<Community>();
-
-  if (!error) {
-    invalidateCacheByPrefix(`community:${id}`);
-    invalidateCacheByPrefix("community-owner:");
-    invalidateCacheByPrefix("owned-communities:");
-    invalidateCacheByPrefix("joined-communities:");
-  }
 
   return {
     data,
@@ -70,11 +61,6 @@ export async function insertCommunity(
     .select("*")
     .single<Community>();
 
-  if (!error) {
-    invalidateCacheByPrefix(`owned-communities:${userId}`);
-    invalidateCacheByPrefix(`joined-communities:${userId}`);
-  }
-
   return {
     data,
     error: error ? error.message : null,
@@ -84,7 +70,6 @@ export async function insertCommunity(
 export async function getCommunity(
   id: string
 ): Promise<{ data: Community | null; error: string | null }> {
-  return getCached(`community:${id}`, COMMUNITY_TTL_MS, async () => {
     const supabase = createClient();
     const { data, error } = await supabase
       .from("communities")
@@ -96,13 +81,11 @@ export async function getCommunity(
       data,
       error: error ? error.message : null,
     };
-  });
 }
 
 export async function getCommunityAndOwner(
   id: string
 ): Promise<{ data: CommunityAndOwner | null; error: string | null }> {
-  return getCached(`community-owner:${id}`, COMMUNITY_TTL_MS, async () => {
     const supabase = createClient();
     const { data, error } = await supabase
       .from("communities")
@@ -117,7 +100,6 @@ export async function getCommunityAndOwner(
       data,
       error: error ? error.message : null,
     };
-  });
 }
 
 export async function getOwnedCommunities(
@@ -128,10 +110,6 @@ export async function getOwnedCommunities(
     return { data: [], error: "User is not Authenticated." };
   }
 
-  return getCached(
-    `owned-communities:${queryId}`,
-    COMMUNITY_TTL_MS,
-    async () => {
       const supabase = createClient();
       const { data, error } = await supabase
         .from("communities")
@@ -142,8 +120,6 @@ export async function getOwnedCommunities(
         data: data ?? [],
         error: error ? error.message : null,
       };
-    }
-  );
 }
 
 export async function getJoinedCommunities(
@@ -154,10 +130,6 @@ export async function getJoinedCommunities(
     return { data: [], error: "User is not Authenticated." };
   }
 
-  return getCached(
-    `joined-communities:${queryId}`,
-    MEMBERSHIP_TTL_MS,
-    async () => {
       const supabase = createClient();
       const { data, error } = await supabase
         .from("joins")
@@ -179,8 +151,6 @@ export async function getJoinedCommunities(
         data: communities,
         error: error ? error.message : null,
       };
-    }
-  );
 }
 
 export async function isCommunityOwner(community: Community): Promise<boolean> {
@@ -194,10 +164,6 @@ export async function hasJoinedCommunity(communityId: string): Promise<boolean> 
     return false;
   }
 
-  return getCached(
-    `has-joined:${userId}:${communityId}`,
-    MEMBERSHIP_TTL_MS,
-    async () => {
       const supabase = createClient();
       const { data: joinExists } = await supabase
         .from("joins")
@@ -207,8 +173,6 @@ export async function hasJoinedCommunity(communityId: string): Promise<boolean> 
         .maybeSingle();
 
       return joinExists !== null;
-    }
-  );
 }
 
 export async function leaveCommunity(
@@ -225,11 +189,6 @@ export async function leaveCommunity(
     .delete()
     .eq("user_id", userId)
     .eq("community_id", communityId);
-
-  if (!error) {
-    invalidateCacheByPrefix(`joined-communities:${userId}`);
-    invalidateCacheByPrefix(`has-joined:${userId}:${communityId}`);
-  }
 
   return {
     error: error ? error.message : null,
@@ -250,11 +209,6 @@ export async function joinCommunity(
     community_id: communityId,
   });
 
-  if (!error) {
-    invalidateCacheByPrefix(`joined-communities:${userId}`);
-    invalidateCacheByPrefix(`has-joined:${userId}:${communityId}`);
-  }
-
   return {
     error: error ? error.message : null,
   };
@@ -264,7 +218,6 @@ export async function getAllCommunities(): Promise<{
   data: Community[];
   error: string | null;
 }> {
-  return getCached("communities:all", COMMUNITY_TTL_MS, async () => {
     const supabase = createClient();
     const { data, error } = await supabase
       .from("communities")
@@ -275,7 +228,6 @@ export async function getAllCommunities(): Promise<{
       data: data ?? [],
       error: error ? error.message : null,
     };
-  });
 }
 
 export async function searchCommunities(
@@ -296,5 +248,98 @@ export async function searchCommunities(
     error: error ? error.message : null,
   };
 }
+
+// QUERY OPTIONS
+
+export const communityQueryOptions = (id: string | null | undefined) =>
+  queryOptions({
+    queryKey: ["community", id] as const,
+    enabled: Boolean(id),
+    staleTime: STALE_TIMES.communityDetails,
+    queryFn: async () => {
+      const { data, error } = await getCommunity(id!);
+      if (error) throw new Error(error);
+      return data;
+    },
+  });
+
+export const communityAndOwnerQueryOptions = (id: string | null | undefined) =>
+  queryOptions({
+    queryKey: ["community-owner", id] as const,
+    enabled: Boolean(id),
+    staleTime: STALE_TIMES.communityDetails,
+    queryFn: async () => {
+      const { data, error } = await getCommunityAndOwner(id!);
+      if (error) throw new Error(error);
+      return data;
+    },
+  });
+
+export const ownedCommunitiesQueryOptions = (userId?: string | null) =>
+  queryOptions({
+    queryKey: ["communities", "owned", userId ?? "current"] as const,
+    staleTime: STALE_TIMES.communityDetails,
+    queryFn: async () => {
+      const { data, error } = await getOwnedCommunities(userId);
+      if (error) throw new Error(error);
+      return data;
+    },
+  });
+
+export const joinedCommunitiesQueryOptions = (userId?: string | null) =>
+  queryOptions({
+    queryKey: ["communities", "joined", userId ?? "current"] as const,
+    staleTime: STALE_TIMES.communityMembership,
+    queryFn: async () => {
+      const { data, error } = await getJoinedCommunities(userId);
+      if (error) throw new Error(error);
+      return data;
+    },
+  });
+
+export const communityOwnerCheckQueryOptions = (
+  community: Community | null | undefined
+) =>
+  queryOptions({
+    queryKey: ["community-owner-check", community?.id, community?.owner_id] as const,
+    enabled: Boolean(community),
+    staleTime: STALE_TIMES.communityDetails,
+    queryFn: () => isCommunityOwner(community!),
+  });
+
+export const hasJoinedCommunityQueryOptions = (
+  communityId: string | null | undefined
+) =>
+  queryOptions({
+    queryKey: ["community-joined", communityId] as const,
+    enabled: Boolean(communityId),
+    staleTime: STALE_TIMES.communityMembership,
+    queryFn: () => hasJoinedCommunity(communityId!),
+  });
+
+export const allCommunitiesQueryOptions = () =>
+  queryOptions({
+    queryKey: ["communities", "all"] as const,
+    staleTime: STALE_TIMES.communityDirectory,
+    queryFn: async () => {
+      const { data, error } = await getAllCommunities();
+      if (error) throw new Error(error);
+      return data;
+    },
+  });
+
+export const searchCommunitiesQueryOptions = (query: string) => {
+  const trimmed = query.trim();
+  return queryOptions({
+    queryKey: ["communities", "search", trimmed.toLowerCase()] as const,
+    enabled: Boolean(trimmed),
+    staleTime: STALE_TIMES.communityDirectory,
+    queryFn: async () => {
+      const { data, error } = await searchCommunities(trimmed);
+      if (error) throw new Error(error);
+      return data;
+    },
+  });
+};
 
 export type { Community, CommunityAndOwner }
