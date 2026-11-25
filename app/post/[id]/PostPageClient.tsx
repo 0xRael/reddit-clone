@@ -14,7 +14,7 @@ import { useRecentPosts } from "@/hooks/useRecentPosts";
 
 import { Reply } from "@/types";
 import { PostMedia } from "@/components/PostMedia";
-import { ReplyItem } from "@/components/ReplyItem";
+import { ReplyItem } from "@/components/ReplyItem"; 
 import { MarkdownContent } from "@/components/MarkdownContent";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
 
@@ -328,12 +328,12 @@ export function PostPageClient({
                     ) : null}
                   </div>
                 </div>
-                <a
+                <Link
                   href={`/user/${post?.user_id}`}
                   className="mr-2 hover:underline"
                 >
                   {post?.users?.username}
-                </a>
+                </Link>
                 <div className="text-gray-400">•</div>
                 <div className="text-gray-400">
                   {formatDistanceToNow(new Date(post?.created_at), {
